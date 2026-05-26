@@ -76,12 +76,7 @@ const App = {
     setupGlobalEvents() {
         document.getElementById('mobile-menu-btn').addEventListener('click', () => {
             const sidebar = document.getElementById('sidebar');
-            if(sidebar.classList.contains('-translate-x-full')) {
-                sidebar.classList.remove('-translate-x-full', 'hidden');
-                sidebar.classList.add('absolute', 'h-full');
-            } else {
-                sidebar.classList.add('-translate-x-full');
-            }
+            sidebar.classList.toggle('-translate-x-full');
         });
 
         document.getElementById('notification-btn').addEventListener('click', () => {
@@ -129,6 +124,12 @@ const App = {
     switchModule(moduleId) {
         this.currentModule = moduleId;
         
+        // Close sidebar on mobile devices automatically
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) {
+            sidebar.classList.add('-translate-x-full');
+        }
+
         // Update nav active state
         document.querySelectorAll('#nav-menu button').forEach(btn => {
             btn.classList.remove('bg-primary/20', 'text-white', 'border-l-2', 'border-primary');
@@ -176,16 +177,16 @@ const App = {
                 ${UI.renderDashboardCard('Pending Claims', stats.pendingClaims, 'fa-truck-medical', 'bg-red-500', '-2%')}
             </div>
             
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 h-96">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 h-auto lg:h-96">
                 <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col">
                     <h3 class="text-lg font-bold text-slate-800 mb-4">Revenue & Policy Growth</h3>
-                    <div class="flex-1 relative w-full h-full">
+                    <div class="flex-1 relative w-full h-64 lg:h-full">
                         <canvas id="revenueChart"></canvas>
                     </div>
                 </div>
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col">
                     <h3 class="text-lg font-bold text-slate-800 mb-4">Portfolio Split</h3>
-                    <div class="flex-1 relative w-full h-full flex justify-center items-center">
+                    <div class="flex-1 relative w-full h-64 lg:h-full flex justify-center items-center">
                         <canvas id="portfolioChart"></canvas>
                     </div>
                 </div>
@@ -321,7 +322,7 @@ const App = {
             </div>
             
             <!-- Cards for fast filter -->
-            <div class="grid grid-cols-4 gap-4 mb-6">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500 cursor-pointer hover:bg-slate-50">
                     <p class="text-slate-500 text-xs font-bold uppercase mb-1">Total Policies</p>
                     <p class="text-xl font-bold text-slate-800">${DataStore.policies.length}</p>
@@ -493,7 +494,7 @@ const App = {
                 </button>
             </div>
             
-            <div class="grid grid-cols-3 gap-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 ${UI.renderDashboardCard('Total Income', '₹' + (DataStore.transactions.filter(t=>t.type==='Credit').reduce((a,b)=>a+b.amount,0)).toLocaleString(), 'fa-arrow-trend-up', 'bg-emerald-500', '+12%')}
                 ${UI.renderDashboardCard('Total Expense', '₹' + (DataStore.transactions.filter(t=>t.type==='Debit').reduce((a,b)=>a+b.amount,0)).toLocaleString(), 'fa-arrow-trend-down', 'bg-red-500', '-3%')}
                 ${UI.renderDashboardCard('Net Profit', '₹' + (DataStore.transactions.filter(t=>t.type==='Credit').reduce((a,b)=>a+b.amount,0) - DataStore.transactions.filter(t=>t.type==='Debit').reduce((a,b)=>a+b.amount,0)).toLocaleString(), 'fa-vault', 'bg-blue-600', '+8%')}
@@ -539,7 +540,7 @@ const App = {
                 </button>
             </div>
             
-            <div class="grid grid-cols-3 gap-6 h-[calc(100vh-12rem)]">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:h-[calc(100vh-12rem)]">
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col overflow-hidden">
                     <div class="p-4 border-b border-slate-100 font-bold text-slate-800 flex justify-between items-center">
                         Recent Chats <span class="badge badge-success">3 New</span>
@@ -560,7 +561,7 @@ const App = {
                     </div>
                 </div>
                 
-                <div class="col-span-2 bg-slate-50 rounded-2xl shadow-inner border border-slate-200 flex flex-col overflow-hidden relative">
+                <div class="col-span-1 lg:col-span-2 bg-slate-50 rounded-2xl shadow-inner border border-slate-200 flex flex-col overflow-hidden relative">
                     <div class="absolute inset-0 bg-[url('https://web.whatsapp.com/img/bg-chat-tile-dark_a4be512e7195b6b733d9110b408f075d.png')] opacity-5"></div>
                     <div class="p-4 bg-white border-b border-slate-200 flex items-center gap-3 relative z-10">
                         <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600">${DataStore.customers[0].name.substring(0,1)}</div>
@@ -605,7 +606,7 @@ const App = {
                 </div>
             </div>
             
-            <div class="grid grid-cols-2 gap-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
                     <h3 class="font-bold text-slate-800 text-lg mb-4">Revenue Trend (YTD)</h3>
                     <div class="flex-1 relative w-full h-48">
