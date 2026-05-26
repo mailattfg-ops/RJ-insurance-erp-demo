@@ -15,6 +15,7 @@ const App = {
     },
     
     currentModule: 'dashboard',
+    crmTab: 'customers',
     charts: [],
 
     init() {
@@ -234,12 +235,22 @@ const App = {
         return `
             <div class="flex justify-between items-center mb-6">
                 <div>
-                    <h2 class="text-2xl font-bold text-slate-800">Customer Relationship Management</h2>
+                    <h2 class="text-2xl font-bold text-slate-800">Customer & Lead Management</h2>
                     <p class="text-slate-500 text-sm">Manage customers, leads, and follow-ups.</p>
                 </div>
-                <button onclick="App.showAddCustomerModal()" class="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-800 transition-colors shadow-md flex items-center gap-2">
-                    <i class="fa-solid fa-plus"></i> New Customer
-                </button>
+                <div class="flex gap-2">
+                    <button onclick="App.showAddCustomerModal()" class="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-800 transition-colors shadow-md flex items-center gap-2">
+                        <i class="fa-solid fa-user-plus"></i> New Customer
+                    </button>
+                    <button onclick="App.showAddLeadModal()" class="bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors shadow-md flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> New Lead
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex gap-4 mb-4 border-b border-slate-200">
+                <button onclick="App.switchCrmTab('customers')" class="pb-2 px-4 text-sm font-bold border-b-2 transition ${this.crmTab === 'customers' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-800'}">Customers (${DataStore.customers.length})</button>
+                <button onclick="App.switchCrmTab('leads')" class="pb-2 px-4 text-sm font-bold border-b-2 transition ${this.crmTab === 'leads' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-800'}">Leads & Enquiries (${DataStore.leads.length})</button>
             </div>
             
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex-1 flex flex-col">
@@ -248,38 +259,51 @@ const App = {
                         <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
                         <input type="text" placeholder="Search by name, phone, or PAN..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none">
                     </div>
-                    <select class="border border-slate-200 rounded-lg text-sm px-3 py-2 outline-none focus:border-primary">
-                        <option>All Customers</option>
-                        <option>Active Policies</option>
-                        <option>No Active Policies</option>
-                    </select>
                 </div>
                 <div class="flex-1 overflow-auto custom-scrollbar">
-                    ${UI.renderTable(
-                        ['ID', 'Name', 'Mobile', 'Email', 'Agent Assigned', 'Policies', 'Status'],
-                        DataStore.customers.map((c, i) => [
-                            `<span class="font-mono text-xs text-slate-500">${c.id}</span>`,
-                            `<div class="font-medium text-slate-800">${c.name}</div>`,
-                            c.mobile,
-                            `<span class="text-slate-500 text-xs">${c.email}</span>`,
-                            c.agentAssigned,
-                            `<span class="bg-slate-100 px-2 py-1 rounded text-xs font-bold">${c.totalPolicies}</span>`,
-                            c.status
-                        ]),
-                        'App.openCustomerDetails'
-                    )}
+                    ${this.crmTab === 'customers' ? 
+                        UI.renderTable(
+                            ['ID', 'Name', 'Mobile', 'Email', 'Agent Assigned', 'Policies', 'Status'],
+                            DataStore.customers.map((c, i) => [
+                                `<span class="font-mono text-xs text-slate-500">${c.id}</span>`,
+                                `<div class="font-medium text-slate-800">${c.name}</div>`,
+                                c.mobile,
+                                `<span class="text-slate-500 text-xs">${c.email}</span>`,
+                                c.agentAssigned,
+                                `<span class="bg-slate-100 px-2 py-1 rounded text-xs font-bold">${c.totalPolicies}</span>`,
+                                c.status
+                            ]),
+                            'App.openCustomerDetails'
+                        ) :
+                        UI.renderTable(
+                            ['Lead ID', 'Name', 'Mobile', 'Type', 'Stage', 'Owner', 'Demo Scheduled', 'Date'],
+                            DataStore.leads.map((l, i) => [
+                                `<span class="font-mono text-xs text-slate-500">${l.id}</span>`,
+                                `<div class="font-medium text-slate-800">${l.name}</div>`,
+                                l.mobile,
+                                l.insuranceType,
+                                `<span class="px-2 py-0.5 rounded text-xs font-bold ${l.stage === 'Interested' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-800'}">${l.stage}</span>`,
+                                l.assignedTo,
+                                l.demoScheduled ? `<span class="px-2 py-0.5 bg-purple-100 text-purple-800 rounded-full text-xs font-bold"><i class="fa-solid fa-calendar-day mr-1"></i>${l.demoScheduled}</span>` : 'None',
+                                l.date
+                            ]),
+                            'App.openLeadDetails'
+                        )
+                    }
                 </div>
                 <div class="p-4 border-t border-slate-100 bg-slate-50 text-sm text-slate-500 flex justify-between items-center">
-                    <span>Showing 1 to ${DataStore.customers.length} of ${DataStore.customers.length} entries</span>
-                    <div class="flex gap-1">
-                        <button class="px-3 py-1 border border-slate-200 rounded bg-white text-slate-400 cursor-not-allowed">Prev</button>
-                        <button class="px-3 py-1 border border-primary rounded bg-primary text-white">1</button>
-                        <button class="px-3 py-1 border border-slate-200 rounded bg-white hover:bg-slate-50">2</button>
-                        <button class="px-3 py-1 border border-slate-200 rounded bg-white hover:bg-slate-50">Next</button>
-                    </div>
+                    <span>Showing 1 to ${this.crmTab === 'customers' ? DataStore.customers.length : DataStore.leads.length} entries</span>
                 </div>
             </div>
         `;
+    },
+
+    switchCrmTab(tab) {
+        this.crmTab = tab;
+        const container = document.getElementById('main-container');
+        if (container) {
+            container.innerHTML = `<div class="module-enter h-full flex flex-col">${this.renderCrmModule()}</div>`;
+        }
     },
 
     renderPolicyModule() {
@@ -341,7 +365,7 @@ const App = {
                     <h2 class="text-2xl font-bold text-slate-800">Claim Workflows</h2>
                     <p class="text-slate-500 text-sm">Register and process insurance claims.</p>
                 </div>
-                <button class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors shadow-md flex items-center gap-2">
+                <button onclick="App.showRegisterClaimModal()" class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors shadow-md flex items-center gap-2">
                     <i class="fa-solid fa-plus"></i> Register Claim
                 </button>
             </div>
@@ -374,8 +398,8 @@ const App = {
                     <p class="text-slate-500 text-sm">Manage premium collections and commissions.</p>
                 </div>
                 <div class="flex gap-2">
-                    <button onclick="App.showAddEntryModal()" class="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm">
-                        <i class="fa-solid fa-building-columns text-primary"></i> Bank Transfer
+                    <button onclick="App.showFundTransferModal()" class="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm">
+                        <i class="fa-solid fa-building-columns text-primary"></i> Fund Transfer
                     </button>
                     <button onclick="App.showAddEntryModal()" class="bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors shadow-md">
                         <i class="fa-solid fa-indian-rupee-sign"></i> Receive Payment
@@ -528,9 +552,15 @@ const App = {
                         </div>
                     </div>
                     
-                    <div class="p-4 bg-white border-t border-slate-200 relative z-10 flex gap-2">
-                        <input type="text" placeholder="Type a message..." class="flex-1 border border-slate-200 rounded-full px-4 py-2 outline-none focus:border-primary text-sm">
-                        <button class="w-10 h-10 rounded-full bg-emerald-500 text-white hover:bg-emerald-600 flex items-center justify-center"><i class="fa-solid fa-paper-plane"></i></button>
+                    <div class="px-4 py-2 bg-slate-100 flex gap-2 border-t border-slate-200 relative z-10 flex-wrap">
+                        <button onclick="App.autofillWhatsAppMsg('Dear Client, your policy is expiring on 15th next month. Please renew here: https://rjins.in/pay')" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs px-2.5 py-1 rounded-full font-medium"><i class="fa-solid fa-clock-rotate-left mr-1"></i> Renewal Template</button>
+                        <button onclick="App.autofillWhatsAppMsg('Dear Client, your premium payment is pending. Avoid policy lapse. Pay now: https://rjins.in/pay')" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs px-2.5 py-1 rounded-full font-medium"><i class="fa-solid fa-bell mr-1"></i> Payment Template</button>
+                        <button onclick="App.autofillWhatsAppMsg('Hello Roy, a demo slot has been confirmed for Tuesday. See you then!')" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs px-2.5 py-1 rounded-full font-medium"><i class="fa-solid fa-calendar mr-1"></i> Tuesday Demo Template</button>
+                    </div>
+                    
+                    <div class="p-4 bg-white relative z-10 flex gap-2">
+                        <input type="text" id="whatsapp-input-msg" placeholder="Type a message..." class="flex-1 border border-slate-200 rounded-full px-4 py-2 outline-none focus:border-primary text-sm">
+                        <button onclick="App.sendWhatsAppMsg()" class="w-10 h-10 rounded-full bg-emerald-500 text-white hover:bg-emerald-600 flex items-center justify-center"><i class="fa-solid fa-paper-plane"></i></button>
                     </div>
                 </div>
             </div>
@@ -593,19 +623,19 @@ const App = {
                     <h2 class="text-2xl font-bold text-slate-800">Secure Document Vault</h2>
                     <p class="text-slate-500 text-sm">Cloud storage for KYC, policies, and claims documents.</p>
                 </div>
-                <button class="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-800 transition-colors shadow-md flex items-center gap-2">
+                <button onclick="App.showUploadDocModal()" class="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-800 transition-colors shadow-md flex items-center gap-2">
                     <i class="fa-solid fa-cloud-arrow-up"></i> Upload Document
                 </button>
             </div>
             
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex-1 flex flex-col">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-6 flex flex-col">
                 <div class="p-4 border-b border-slate-100 bg-slate-50 flex gap-4">
                     <div class="relative flex-1 max-w-md">
                         <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
                         <input type="text" placeholder="Search documents..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none">
                     </div>
                 </div>
-                <div class="flex-1 overflow-auto custom-scrollbar p-6 grid grid-cols-4 gap-6">
+                <div class="overflow-auto custom-scrollbar p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
                     ${[1,2,3,4,5,6,7,8].map(i => `
                         <div class="border border-slate-200 rounded-xl p-4 flex flex-col items-center text-center hover:shadow-md hover:border-primary cursor-pointer transition group">
                             <i class="fa-solid fa-file-pdf text-red-500 text-5xl mb-3 group-hover:scale-110 transition-transform"></i>
@@ -613,6 +643,22 @@ const App = {
                             <p class="text-xs text-slate-400 mt-1">1.${i} MB • 2 days ago</p>
                         </div>
                     `).join('')}
+                </div>
+            </div>
+
+            <!-- Backup & Data Security Panel -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col sm:flex-row justify-between items-center gap-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-2xl"><i class="fa-solid fa-shield-halved"></i></div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-md">Backup & Data Security Status</h3>
+                        <p class="text-xs text-slate-500">Local and cloud backup systems are fully active and synchronized.</p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-4 text-xs font-semibold">
+                    <span class="bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded-full flex items-center gap-1.5"><i class="fa-solid fa-circle-check"></i> AES-256 Encrypted</span>
+                    <span class="bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full flex items-center gap-1.5"><i class="fa-solid fa-cloud-arrow-up"></i> Cloud Sync Active</span>
+                    <span class="bg-purple-100 text-purple-800 px-3 py-1.5 rounded-full flex items-center gap-1.5"><i class="fa-solid fa-clock-rotate-left"></i> Daily Backup Done</span>
                 </div>
             </div>
         `;
@@ -1034,7 +1080,7 @@ const App = {
         `;
         
         const actions = `
-            <button class="bg-primary text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-800">Update Status</button>
+            <button onclick="App.showUpdateClaimStatusModal(${index})" class="bg-primary text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-800">Update Status</button>
         `;
         
         UI.createModal('view-claim', 'Claim Details Tracker', content, actions);
@@ -1052,17 +1098,22 @@ const App = {
                 <p class="text-primary font-medium">${e.role}</p>
             </div>
             
-            <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
                 <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
                     <p class="text-xs text-slate-500 font-bold uppercase mb-1">Monthly Target</p>
-                    <div class="w-16 h-16 rounded-full border-4 border-emerald-500 flex items-center justify-center mx-auto mt-2">
-                        <span class="font-bold text-slate-800">${e.performance}%</span>
+                    <div class="w-12 h-12 rounded-full border-4 border-emerald-500 flex items-center justify-center mx-auto mt-2">
+                        <span class="font-bold text-slate-800 text-sm">${e.performance}%</span>
                     </div>
                 </div>
                 <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center flex flex-col justify-center">
+                    <p class="text-xs text-slate-500 font-bold uppercase mb-1">Attendance</p>
+                    <p class="text-lg font-bold text-slate-800 mt-2">22 / 24 Days</p>
+                    <p class="text-xs text-slate-400">91.6% Present</p>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center flex flex-col justify-center col-span-2 sm:col-span-1">
                     <p class="text-xs text-slate-500 font-bold uppercase mb-1">Base Salary</p>
-                    <p class="text-xl font-bold text-slate-800">₹${e.salary.toLocaleString()}</p>
-                    <p class="text-xs text-emerald-600 mt-1">+ Commission</p>
+                    <p class="text-lg font-bold text-slate-800 mt-1">₹${e.salary.toLocaleString()}</p>
+                    <p class="text-[10px] text-emerald-600 mt-0.5">+ ₹${Math.floor(e.salary * 0.15).toLocaleString()} Incentive</p>
                 </div>
             </div>
         `;
@@ -1073,6 +1124,258 @@ const App = {
 
     actionWhatsApp(name) {
         UI.showToast(`Opening WhatsApp Web for ${name}...`, 'success');
+    },
+
+    openLeadDetails(index) {
+        const lead = DataStore.leads[index];
+        const content = `
+            <div class="space-y-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl font-bold">
+                        ${lead.name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-800">${lead.name}</h3>
+                        <p class="text-sm text-slate-500">Lead ID: <span class="font-mono">${lead.id}</span></p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase font-bold">Mobile</p>
+                        <p class="text-sm font-medium text-slate-700">${lead.mobile}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase font-bold">Insurance Type</p>
+                        <p class="text-sm font-medium text-slate-700">${lead.insuranceType}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase font-bold">Current Stage</p>
+                        <select onchange="App.updateLeadStage(${index}, this.value)" class="text-sm border border-slate-200 rounded px-2 py-1 focus:border-primary outline-none bg-white font-medium text-slate-700">
+                            <option value="New Lead" ${lead.stage === 'New Lead' ? 'selected' : ''}>New Lead</option>
+                            <option value="Contacted" ${lead.stage === 'Contacted' ? 'selected' : ''}>Contacted</option>
+                            <option value="Follow-Up" ${lead.stage === 'Follow-Up' ? 'selected' : ''}>Follow-Up</option>
+                            <option value="Quote Shared" ${lead.stage === 'Quote Shared' ? 'selected' : ''}>Quote Shared</option>
+                            <option value="Interested" ${lead.stage === 'Interested' ? 'selected' : ''}>Interested</option>
+                            <option value="Negotiation" ${lead.stage === 'Negotiation' ? 'selected' : ''}>Negotiation</option>
+                        </select>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 uppercase font-bold">Assigned Owner</p>
+                        <p class="text-sm font-medium text-slate-700">${lead.assignedTo}</p>
+                    </div>
+                    ${lead.demoScheduled ? `
+                    <div class="col-span-2 bg-purple-50 p-3 rounded-lg border border-purple-100 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-purple-700 font-bold uppercase"><i class="fa-solid fa-calendar-check mr-1"></i> Demo Scheduled</p>
+                            <p class="text-sm font-medium text-purple-900 mt-0.5">${lead.demoScheduled}</p>
+                        </div>
+                        <span class="text-[10px] bg-purple-200 text-purple-800 font-bold px-2 py-0.5 rounded uppercase">Upcoming</span>
+                    </div>
+                    ` : ''}
+                    ${lead.requirementSummary ? `
+                    <div class="col-span-2">
+                        <p class="text-xs text-slate-400 uppercase font-bold">Requirement Summary</p>
+                        <p class="text-sm text-slate-600 mt-1">${lead.requirementSummary}</p>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        
+        const actions = `
+            <button onclick="App.actionWhatsApp('${lead.name}')" class="bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-emerald-600"><i class="fa-brands fa-whatsapp mr-2"></i>Send WhatsApp Demo link</button>
+            <button onclick="UI.showToast('Lead converted to Customer successfully!'); UI.closeModal('view-lead');" class="bg-primary text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-800"><i class="fa-solid fa-check mr-1"></i> Convert to Customer</button>
+        `;
+        
+        UI.createModal('view-lead', 'Lead Information & Tracking', content, actions);
+        UI.openModal('view-lead');
+    },
+
+    updateLeadStage(index, newStage) {
+        DataStore.leads[index].stage = newStage;
+        UI.showToast(`Lead stage updated to ${newStage}`);
+        if (App.currentModule === 'crm') {
+            App.switchCrmTab('leads');
+        }
+    },
+
+    showAddLeadModal() {
+        const content = `
+            <form class="space-y-4" onsubmit="event.preventDefault(); UI.closeModal('add-lead'); UI.showToast('New lead added successfully!'); App.switchCrmTab('leads');">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Lead Name</label>
+                        <input type="text" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Mobile</label>
+                        <input type="tel" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Insurance Requirement</label>
+                        <select class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                            <option value="Motor">Motor Insurance</option>
+                            <option value="Health">Health Insurance</option>
+                            <option value="Life">Life Insurance</option>
+                            <option value="Home">Home Insurance</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Assigned Executive</label>
+                        <input type="text" value="CRM Executive 1" disabled class="w-full border border-slate-200 bg-slate-100 rounded-lg px-3 py-2 text-sm outline-none">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Demo Date/Schedule (Optional)</label>
+                        <input type="text" placeholder="e.g. Tuesday" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg font-medium hover:bg-blue-800 transition mt-4">Save Lead</button>
+            </form>
+        `;
+        UI.createModal('add-lead', 'Create New Lead / Enquiry', content);
+        UI.openModal('add-lead');
+    },
+
+    showRegisterClaimModal() {
+        const content = `
+            <form class="space-y-4" onsubmit="event.preventDefault(); UI.closeModal('register-claim'); UI.showToast('Claim registered successfully!'); App.switchModule('claims');">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Policy ID</label>
+                        <input type="text" required placeholder="e.g. POL-100234" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Claimant Name</label>
+                        <input type="text" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Estimated Claim Amount (₹)</label>
+                        <input type="number" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Loss Category</label>
+                        <select class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                            <option value="Accident">Accident</option>
+                            <option value="Theft">Theft</option>
+                            <option value="Medical Admission">Medical Admission</option>
+                            <option value="Property Damage">Property Damage</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Supporting Claim Documents (KYC/FIR/Bills)</label>
+                        <input type="file" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-red-500 text-white py-2 rounded-lg font-medium hover:bg-red-600 transition mt-4">Submit Registration</button>
+            </form>
+        `;
+        UI.createModal('register-claim', 'Register New Claim Process', content);
+        UI.openModal('register-claim');
+    },
+
+    showUpdateClaimStatusModal(index) {
+        const c = DataStore.claims[index];
+        const content = `
+            <form class="space-y-4" onsubmit="event.preventDefault(); App.updateClaimStatus(${index}, document.getElementById('update-claim-status-val').value);">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Set Status</label>
+                    <select id="update-claim-status-val" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                        <option value="Under Review" ${c.status === 'Under Review' ? 'selected' : ''}>Under Review</option>
+                        <option value="Document Verification" ${c.status === 'Document Verification' ? 'selected' : ''}>Document Verification</option>
+                        <option value="Approved" ${c.status === 'Approved' ? 'selected' : ''}>Approved</option>
+                        <option value="Rejected" ${c.status === 'Rejected' ? 'selected' : ''}>Rejected</option>
+                        <option value="Settlement Completed" ${c.status === 'Settlement Completed' ? 'selected' : ''}>Settlement Completed</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg font-medium hover:bg-blue-800 transition">Update Workflow</button>
+            </form>
+        `;
+        UI.createModal('update-claim', 'Update Claim Workflow Status', content);
+        UI.openModal('update-claim');
+    },
+
+    updateClaimStatus(index, newStatus) {
+        DataStore.claims[index].status = newStatus;
+        UI.closeModal('update-claim');
+        UI.closeModal('view-claim');
+        UI.showToast(`Claim status changed to ${newStatus}`);
+        if (App.currentModule === 'claims') {
+            const container = document.getElementById('main-container');
+            container.innerHTML = `<div class="module-enter h-full flex flex-col">${App.renderClaimsModule()}</div>`;
+        }
+    },
+
+    showFundTransferModal() {
+        const content = `
+            <form class="space-y-4" onsubmit="event.preventDefault(); UI.closeModal('fund-transfer'); UI.showToast('Fund transfer recorded successfully!'); App.switchModule('payments');">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">From Bank / Source</label>
+                        <select required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                            <option value="HDFC Bank Current A/c">HDFC Bank Current A/c</option>
+                            <option value="SBI Operating A/c">SBI Operating A/c</option>
+                            <option value="ICICI Reserves">ICICI Reserves</option>
+                            <option value="Cash Vault">Cash Vault</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">To Account / Destination</label>
+                        <select required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                            <option value="SBI Operating A/c">SBI Operating A/c</option>
+                            <option value="HDFC Bank Current A/c">HDFC Bank Current A/c</option>
+                            <option value="ICICI Reserves">ICICI Reserves</option>
+                            <option value="Vendor / Partner Account">Vendor / Partner Account</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Transfer Amount (₹)</label>
+                        <input type="number" required min="1" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Remarks / Transaction Ref</label>
+                        <input type="text" placeholder="e.g. NEFT Reference, IMPS No" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg font-medium hover:bg-blue-800 transition mt-4">Initiate Transfer</button>
+            </form>
+        `;
+        UI.createModal('fund-transfer', 'Inter-Bank Fund Transfer', content);
+        UI.openModal('fund-transfer');
+    },
+
+    showUploadDocModal() {
+        const content = `
+            <form class="space-y-4" onsubmit="event.preventDefault(); UI.closeModal('upload-doc'); UI.showToast('Document uploaded and encrypted successfully!'); App.switchModule('storage');">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Select File</label>
+                    <input type="file" required class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Document Category</label>
+                    <select required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                        <option value="KYC">KYC Document</option>
+                        <option value="Policy">Policy Copy</option>
+                        <option value="Claim">Claim Supporting Bill / Photo</option>
+                        <option value="Internal">Internal HR / Account Document</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg font-medium hover:bg-blue-800 transition">Upload to Secure Cloud</button>
+            </form>
+        `;
+        UI.createModal('upload-doc', 'Secure Document Upload', content);
+        UI.openModal('upload-doc');
+    },
+
+    autofillWhatsAppMsg(msg) {
+        document.getElementById('whatsapp-input-msg').value = msg;
+    },
+
+    sendWhatsAppMsg() {
+        const input = document.getElementById('whatsapp-input-msg');
+        if(!input || !input.value.trim()) return;
+        UI.showToast('WhatsApp Message Sent successfully!', 'success');
+        input.value = '';
     }
 };
 

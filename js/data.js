@@ -57,10 +57,22 @@ const DataStore = {
 
         // Generate Leads
         const leadStages = ['New Lead', 'Contacted', 'Follow-Up', 'Quote Shared', 'Interested', 'Negotiation'];
+        this.leads.push({
+            id: `LD-4999`,
+            name: `Roy`,
+            mobile: `9876543210`,
+            insuranceType: `Motor`,
+            stage: `Interested`,
+            assignedTo: this.employees.filter(e => e.role === 'CRM Executive')[0]?.name || 'Unassigned',
+            date: new Date().toISOString().split('T')[0],
+            demoScheduled: `Tuesday`,
+            requirementSummary: `Comprehensive Motor & Health Insurance for company fleet.`
+        });
+        
         for(let i=1; i<=200; i++) {
             const fname = firstNames[Math.floor(Math.random() * firstNames.length)];
             this.leads.push({
-                id: `LD-${5000+i}`,
+                id: `LD-5000+i`,
                 name: `${fname} Lead`,
                 mobile: `8${Math.floor(100000000 + Math.random() * 900000000)}`,
                 insuranceType: ['Motor', 'Health', 'Life', 'Home'][Math.floor(Math.random() * 4)],
