@@ -1,0 +1,1092 @@
+// Core App Logic
+
+const App = {
+    modules: {
+        'dashboard': { icon: 'fa-chart-pie', label: 'Dashboard', roles: ['Admin', 'CRM Executive', 'Agent', 'Claims Manager', 'Accountant', 'Employee'] },
+        'crm': { icon: 'fa-users', label: 'CRM Management', roles: ['Admin', 'CRM Executive', 'Agent'] },
+        'policy': { icon: 'fa-file-shield', label: 'Policies', roles: ['Admin', 'Agent', 'CRM Executive'] },
+        'claims': { icon: 'fa-truck-medical', label: 'Claims Workflow', roles: ['Admin', 'Claims Manager'] },
+        'payments': { icon: 'fa-money-bill-transfer', label: 'Banking & Payments', roles: ['Admin', 'Accountant'] },
+        'hr': { icon: 'fa-user-tie', label: 'HR & Employees', roles: ['Admin'] },
+        'accounts': { icon: 'fa-file-invoice-dollar', label: 'Accounts', roles: ['Admin', 'Accountant'] },
+        'notifications': { icon: 'fa-message', label: 'Communication', roles: ['Admin', 'CRM Executive', 'Agent'] },
+        'reports': { icon: 'fa-chart-line', label: 'Reports center', roles: ['Admin', 'Accountant'] },
+        'storage': { icon: 'fa-cloud', label: 'Secure Storage', roles: ['Admin', 'CRM Executive', 'Agent', 'Claims Manager', 'Accountant'] }
+    },
+    
+    currentModule: 'dashboard',
+    charts: [],
+
+    init() {
+        this.setupAuth();
+        this.setupGlobalEvents();
+    },
+
+    setupAuth() {
+        const loginForm = document.getElementById('login-form');
+        const togglePwd = document.getElementById('toggle-password');
+        
+        togglePwd.addEventListener('click', (e) => {
+            const pwdInput = document.getElementById('password');
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+                togglePwd.innerHTML = '<i class="fa-regular fa-eye-slash"></i>';
+            } else {
+                pwdInput.type = 'password';
+                togglePwd.innerHTML = '<i class="fa-regular fa-eye"></i>';
+            }
+        });
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            
+            // Simple mock role resolution based on email
+            let role = 'Employee';
+            if(email.includes('admin')) role = 'Admin';
+            else if(email.includes('crm')) role = 'CRM Executive';
+            else if(email.includes('agent')) role = 'Agent';
+            else if(email.includes('claims')) role = 'Claims Manager';
+            else if(email.includes('accounts')) role = 'Accountant';
+
+            const btn = document.getElementById('login-btn');
+            const ogText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Authenticating...';
+            btn.disabled = true;
+
+            setTimeout(() => {
+                DataStore.currentUser = { name: email.split('@')[0].toUpperCase(), email, role };
+                this.loadApp();
+                btn.innerHTML = ogText;
+                btn.disabled = false;
+                UI.showToast(`Welcome back, ${role}!`);
+            }, 1000);
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            DataStore.currentUser = null;
+            document.getElementById('app-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('login-form').reset();
+            UI.showToast('Logged out successfully', 'info');
+        });
+    },
+
+    setupGlobalEvents() {
+        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            if(sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full', 'hidden');
+                sidebar.classList.add('absolute', 'h-full');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+            }
+        });
+
+        document.getElementById('notification-btn').addEventListener('click', () => {
+            UI.showToast('You have 3 new WhatsApp replies from customers.', 'info');
+        });
+    },
+
+    loadApp() {
+        document.getElementById('login-screen').classList.add('hidden');
+        const appScreen = document.getElementById('app-screen');
+        appScreen.classList.remove('hidden');
+        appScreen.classList.add('fade-in-up');
+
+        // Setup user details
+        const initials = DataStore.currentUser.name.substring(0, 2);
+        document.getElementById('user-avatar-initials').innerText = initials;
+        document.getElementById('user-name-display').innerText = DataStore.currentUser.name;
+        document.getElementById('user-role-display').innerText = DataStore.currentUser.role;
+
+        this.renderSidebar();
+        this.switchModule('dashboard');
+    },
+
+    renderSidebar() {
+        const menu = document.getElementById('nav-menu');
+        menu.innerHTML = '';
+        
+        const role = DataStore.currentUser.role;
+        
+        Object.keys(this.modules).forEach(key => {
+            const mod = this.modules[key];
+            if (mod.roles.includes(role)) {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <button onclick="App.switchModule('${key}')" id="nav-${key}" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-400 hover:bg-primary/10 hover:text-white transition-all text-sm font-medium group">
+                        <i class="fa-solid ${mod.icon} text-lg w-5 text-center group-hover:text-primary transition-colors"></i>
+                        <span>${mod.label}</span>
+                    </button>
+                `;
+                menu.appendChild(li);
+            }
+        });
+    },
+
+    switchModule(moduleId) {
+        this.currentModule = moduleId;
+        
+        // Update nav active state
+        document.querySelectorAll('#nav-menu button').forEach(btn => {
+            btn.classList.remove('bg-primary/20', 'text-white', 'border-l-2', 'border-primary');
+            if(btn.id === `nav-${moduleId}`) {
+                btn.classList.add('bg-primary/20', 'text-white', 'border-l-2', 'border-primary');
+            }
+        });
+
+        const container = document.getElementById('main-container');
+        container.innerHTML = `<div class="flex justify-center items-center h-full"><i class="fa-solid fa-circle-notch fa-spin text-4xl text-primary"></i></div>`;
+        
+        // Clear old charts
+        this.charts.forEach(c => c.destroy());
+        this.charts = [];
+
+        // Simulate network delay for realistic feel
+        setTimeout(() => {
+            container.innerHTML = `<div class="module-enter h-full flex flex-col">${this[`render${moduleId.charAt(0).toUpperCase() + moduleId.slice(1)}Module`]()}</div>`;
+            
+            // Post render logic
+            if (moduleId === 'dashboard') this.initDashboardCharts();
+            if (moduleId === 'reports') this.initReportCharts();
+        }, 300);
+    },
+
+    // --- MODULE RENDERING --- //
+
+    renderDashboardModule() {
+        const stats = DataStore.getSummaryStats();
+        return `
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Enterprise Dashboard</h2>
+                    <p class="text-slate-500 text-sm">Real-time overview of RJ Insurance operations.</p>
+                </div>
+                <button class="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-2">
+                    <i class="fa-solid fa-download"></i> Export Report
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                ${UI.renderDashboardCard('Total Revenue', stats.monthlyRevenue, 'fa-indian-rupee-sign', 'bg-emerald-500')}
+                ${UI.renderDashboardCard('Total Customers', stats.totalCustomers, 'fa-users', 'bg-blue-600')}
+                ${UI.renderDashboardCard('Active Policies', stats.activePolicies, 'fa-file-shield', 'bg-teal-600')}
+                ${UI.renderDashboardCard('Pending Claims', stats.pendingClaims, 'fa-truck-medical', 'bg-red-500', '-2%')}
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 h-96">
+                <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4">Revenue & Policy Growth</h3>
+                    <div class="flex-1 relative w-full h-full">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4">Portfolio Split</h3>
+                    <div class="flex-1 relative w-full h-full flex justify-center items-center">
+                        <canvas id="portfolioChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-0 overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                        <h3 class="text-lg font-bold text-slate-800">Policies Expiring Soon</h3>
+                        <span class="badge badge-warning">${stats.expiringSoon} Pending</span>
+                    </div>
+                    <div class="p-0">
+                        ${UI.renderTable(
+                            ['Policy ID', 'Customer', 'Type', 'Expiry', 'Action'],
+                            DataStore.policies.filter(p => new Date(p.expiryDate) > new Date() && new Date(p.expiryDate) <= new Date(Date.now() + 30*24*60*60*1000)).slice(0, 5).map(p => [
+                                p.id,
+                                p.customerName,
+                                p.type,
+                                `<span class="text-red-600 font-medium">${p.expiryDate}</span>`,
+                                `<button onclick="App.actionWhatsApp('${p.customerName}')" class="text-emerald-600 hover:text-emerald-800 p-1 bg-emerald-50 rounded"><i class="fa-brands fa-whatsapp"></i></button>`
+                            ])
+                        )}
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-0 overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                        <h3 class="text-lg font-bold text-slate-800">Recent Claims Workflow</h3>
+                    </div>
+                    <div class="p-0">
+                        ${UI.renderTable(
+                            ['Claim ID', 'Customer', 'Status', 'Amount'],
+                            DataStore.claims.slice(0, 5).map(c => [
+                                c.id,
+                                c.customerName,
+                                c.status,
+                                `₹${c.amount.toLocaleString()}`
+                            ])
+                        )}
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    renderCrmModule() {
+        return `
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Customer Relationship Management</h2>
+                    <p class="text-slate-500 text-sm">Manage customers, leads, and follow-ups.</p>
+                </div>
+                <button onclick="App.showAddCustomerModal()" class="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-800 transition-colors shadow-md flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> New Customer
+                </button>
+            </div>
+            
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex-1 flex flex-col">
+                <div class="p-4 border-b border-slate-100 bg-slate-50 flex gap-4">
+                    <div class="relative flex-1 max-w-md">
+                        <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" placeholder="Search by name, phone, or PAN..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                    </div>
+                    <select class="border border-slate-200 rounded-lg text-sm px-3 py-2 outline-none focus:border-primary">
+                        <option>All Customers</option>
+                        <option>Active Policies</option>
+                        <option>No Active Policies</option>
+                    </select>
+                </div>
+                <div class="flex-1 overflow-auto custom-scrollbar">
+                    ${UI.renderTable(
+                        ['ID', 'Name', 'Mobile', 'Email', 'Agent Assigned', 'Policies', 'Status'],
+                        DataStore.customers.map((c, i) => [
+                            `<span class="font-mono text-xs text-slate-500">${c.id}</span>`,
+                            `<div class="font-medium text-slate-800">${c.name}</div>`,
+                            c.mobile,
+                            `<span class="text-slate-500 text-xs">${c.email}</span>`,
+                            c.agentAssigned,
+                            `<span class="bg-slate-100 px-2 py-1 rounded text-xs font-bold">${c.totalPolicies}</span>`,
+                            c.status
+                        ]),
+                        'App.openCustomerDetails'
+                    )}
+                </div>
+                <div class="p-4 border-t border-slate-100 bg-slate-50 text-sm text-slate-500 flex justify-between items-center">
+                    <span>Showing 1 to ${DataStore.customers.length} of ${DataStore.customers.length} entries</span>
+                    <div class="flex gap-1">
+                        <button class="px-3 py-1 border border-slate-200 rounded bg-white text-slate-400 cursor-not-allowed">Prev</button>
+                        <button class="px-3 py-1 border border-primary rounded bg-primary text-white">1</button>
+                        <button class="px-3 py-1 border border-slate-200 rounded bg-white hover:bg-slate-50">2</button>
+                        <button class="px-3 py-1 border border-slate-200 rounded bg-white hover:bg-slate-50">Next</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    renderPolicyModule() {
+        return `
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Policy Management</h2>
+                    <p class="text-slate-500 text-sm">Track renewals, issue new policies, and view history.</p>
+                </div>
+                <button class="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-800 transition-colors shadow-md flex items-center gap-2">
+                    <i class="fa-solid fa-file-contract"></i> Issue Policy
+                </button>
+            </div>
+            
+            <!-- Cards for fast filter -->
+            <div class="grid grid-cols-4 gap-4 mb-6">
+                <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500 cursor-pointer hover:bg-slate-50">
+                    <p class="text-slate-500 text-xs font-bold uppercase mb-1">Total Policies</p>
+                    <p class="text-xl font-bold text-slate-800">${DataStore.policies.length}</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-emerald-500 cursor-pointer hover:bg-slate-50">
+                    <p class="text-slate-500 text-xs font-bold uppercase mb-1">Active</p>
+                    <p class="text-xl font-bold text-slate-800">${DataStore.policies.filter(p=>p.status==='Active').length}</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-yellow-500 cursor-pointer hover:bg-slate-50">
+                    <p class="text-slate-500 text-xs font-bold uppercase mb-1">Renewal Due (30D)</p>
+                    <p class="text-xl font-bold text-slate-800">${DataStore.getSummaryStats().expiringSoon}</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-red-500 cursor-pointer hover:bg-slate-50">
+                    <p class="text-slate-500 text-xs font-bold uppercase mb-1">Expired</p>
+                    <p class="text-xl font-bold text-slate-800">${DataStore.policies.filter(p=>p.status==='Expired').length}</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex-1 flex flex-col">
+                <div class="flex-1 overflow-auto custom-scrollbar">
+                    ${UI.renderTable(
+                        ['Policy No', 'Company', 'Customer', 'Type', 'Premium', 'Expiry', 'Status'],
+                        DataStore.policies.map((p, i) => [
+                            `<span class="font-mono text-xs text-primary font-bold cursor-pointer hover:underline">${p.id}</span>`,
+                            `<div class="flex items-center gap-2"><div class="w-6 h-6 rounded bg-slate-100 flex items-center justify-center text-xs"><i class="fa-solid fa-building"></i></div> <span class="text-sm font-medium">${p.company}</span></div>`,
+                            p.customerName,
+                            p.type,
+                            `₹${p.premium.toLocaleString()}`,
+                            p.expiryDate,
+                            p.status
+                        ]),
+                        'App.openPolicyDetails'
+                    )}
+                </div>
+            </div>
+        `;
+    },
+
+    renderClaimsModule() {
+        return `
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Claim Workflows</h2>
+                    <p class="text-slate-500 text-sm">Register and process insurance claims.</p>
+                </div>
+                <button class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition-colors shadow-md flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Register Claim
+                </button>
+            </div>
+            
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex-1 flex flex-col">
+                <div class="flex-1 overflow-auto custom-scrollbar">
+                    ${UI.renderTable(
+                        ['Claim ID', 'Policy ID', 'Customer', 'Type', 'Date', 'Amount', 'Status'],
+                        DataStore.claims.map((c, i) => [
+                            `<span class="font-mono text-xs font-bold">${c.id}</span>`,
+                            `<span class="font-mono text-xs text-slate-500">${c.policyId}</span>`,
+                            c.customerName,
+                            c.type,
+                            c.date,
+                            `₹${c.amount.toLocaleString()}`,
+                            c.status
+                        ]),
+                        'App.openClaimDetails'
+                    )}
+                </div>
+            </div>
+        `;
+    },
+
+    renderPaymentsModule() {
+        return `
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Payments & Banking</h2>
+                    <p class="text-slate-500 text-sm">Manage premium collections and commissions.</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="App.showAddEntryModal()" class="bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm">
+                        <i class="fa-solid fa-building-columns text-primary"></i> Bank Transfer
+                    </button>
+                    <button onclick="App.showAddEntryModal()" class="bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors shadow-md">
+                        <i class="fa-solid fa-indian-rupee-sign"></i> Receive Payment
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex-1 flex flex-col">
+                <div class="flex-1 overflow-auto custom-scrollbar">
+                    ${UI.renderTable(
+                        ['Txn ID', 'Date', 'Category', 'Mode', 'Type', 'Amount', 'Status'],
+                        DataStore.transactions.map((t, i) => [
+                            `<span class="font-mono text-xs">${t.id}</span>`,
+                            t.date,
+                            t.category,
+                            `<span class="px-2 py-1 bg-slate-100 rounded text-xs">${t.mode}</span>`,
+                            t.type === 'Credit' ? `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-arrow-down mr-1"></i>IN</span>` : `<span class="text-red-600 font-bold"><i class="fa-solid fa-arrow-up mr-1"></i>OUT</span>`,
+                            `<span class="font-mono font-medium">₹${t.amount.toLocaleString()}</span>`,
+                            t.status
+                        ])
+                    )}
+                </div>
+            </div>
+        `;
+    },
+
+    renderHrModule() {
+        return `
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Employee Management</h2>
+                    <p class="text-slate-500 text-sm">HR, Salary, and Performance tracking.</p>
+                </div>
+                <button onclick="App.showAddEmployeeModal()" class="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-800 transition-colors shadow-md flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus"></i> Add Employee
+                </button>
+            </div>
+            
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex-1 flex flex-col">
+                <div class="flex-1 overflow-auto custom-scrollbar">
+                    ${UI.renderTable(
+                        ['EMP ID', 'Name', 'Role', 'Mobile', 'Base Salary', 'Performance', 'Status'],
+                        DataStore.employees.map((e, i) => [
+                            `<span class="font-mono text-xs">${e.id}</span>`,
+                            `<div class="font-medium">${e.name}</div><div class="text-xs text-slate-400">${e.email}</div>`,
+                            e.role,
+                            e.mobile,
+                            `₹${e.salary.toLocaleString()}`,
+                            `<div class="w-full bg-slate-100 rounded-full h-2.5 mt-2"><div class="bg-primary h-2.5 rounded-full" style="width: ${e.performance}%"></div></div>`,
+                            e.status
+                        ]),
+                        'App.openEmployeeDetails'
+                    )}
+                </div>
+            </div>
+        `;
+    },
+
+    renderAccountsModule() {
+        return `
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Accounts Dashboard</h2>
+                    <p class="text-slate-500 text-sm">Manage cash flow, income, expenses, and ledger.</p>
+                </div>
+                <button onclick="App.showAddEntryModal()" class="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-800 transition-colors shadow-md flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Record Entry
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-6 mb-6">
+                ${UI.renderDashboardCard('Total Income', '₹' + (DataStore.transactions.filter(t=>t.type==='Credit').reduce((a,b)=>a+b.amount,0)).toLocaleString(), 'fa-arrow-trend-up', 'bg-emerald-500', '+12%')}
+                ${UI.renderDashboardCard('Total Expense', '₹' + (DataStore.transactions.filter(t=>t.type==='Debit').reduce((a,b)=>a+b.amount,0)).toLocaleString(), 'fa-arrow-trend-down', 'bg-red-500', '-3%')}
+                ${UI.renderDashboardCard('Net Profit', '₹' + (DataStore.transactions.filter(t=>t.type==='Credit').reduce((a,b)=>a+b.amount,0) - DataStore.transactions.filter(t=>t.type==='Debit').reduce((a,b)=>a+b.amount,0)).toLocaleString(), 'fa-vault', 'bg-blue-600', '+8%')}
+            </div>
+            
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex-1 flex flex-col mt-6">
+                <div class="p-4 border-b border-slate-100 bg-slate-50 font-bold text-slate-800">
+                    Recent Ledger Entries
+                </div>
+                <div class="flex-1 overflow-auto custom-scrollbar">
+                    ${UI.renderTable(
+                        ['Txn ID', 'Date', 'Category', 'Mode', 'Type', 'Amount', 'Status'],
+                        DataStore.transactions.slice(0, 15).map((t, i) => [
+                            `<span class="font-mono text-xs">${t.id}</span>`,
+                            t.date,
+                            t.category,
+                            `<span class="px-2 py-1 bg-slate-100 rounded text-xs">${t.mode}</span>`,
+                            t.type === 'Credit' ? `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-arrow-down mr-1"></i>IN</span>` : `<span class="text-red-600 font-bold"><i class="fa-solid fa-arrow-up mr-1"></i>OUT</span>`,
+                            `<span class="font-mono font-medium">₹${t.amount.toLocaleString()}</span>`,
+                            t.status
+                        ])
+                    )}
+                </div>
+            </div>
+        `;
+    },
+
+    renderNotificationsModule() {
+        return `
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Communication Center</h2>
+                    <p class="text-slate-500 text-sm">WhatsApp, SMS, and Email integrations.</p>
+                </div>
+                <button class="bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors shadow-md flex items-center gap-2">
+                    <i class="fa-brands fa-whatsapp"></i> Broadcast Message
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-6 h-[calc(100vh-12rem)]">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col overflow-hidden">
+                    <div class="p-4 border-b border-slate-100 font-bold text-slate-800 flex justify-between items-center">
+                        Recent Chats <span class="badge badge-success">3 New</span>
+                    </div>
+                    <div class="flex-1 overflow-auto custom-scrollbar">
+                        ${DataStore.customers.slice(0, 8).map((c, i) => `
+                            <div class="p-4 border-b border-slate-50 flex gap-3 hover:bg-slate-50 cursor-pointer ${i < 3 ? 'bg-blue-50/50' : ''}">
+                                <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600">${c.name.substring(0,1)}</div>
+                                <div class="flex-1 overflow-hidden">
+                                    <div class="flex justify-between items-start">
+                                        <p class="text-sm font-bold text-slate-800 truncate">${c.name}</p>
+                                        <p class="text-xs text-slate-400">10:30 AM</p>
+                                    </div>
+                                    <p class="text-xs text-slate-500 truncate">Sir, when is my renewal due?</p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div class="col-span-2 bg-slate-50 rounded-2xl shadow-inner border border-slate-200 flex flex-col overflow-hidden relative">
+                    <div class="absolute inset-0 bg-[url('https://web.whatsapp.com/img/bg-chat-tile-dark_a4be512e7195b6b733d9110b408f075d.png')] opacity-5"></div>
+                    <div class="p-4 bg-white border-b border-slate-200 flex items-center gap-3 relative z-10">
+                        <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600">${DataStore.customers[0].name.substring(0,1)}</div>
+                        <div>
+                            <p class="font-bold text-slate-800">${DataStore.customers[0].name}</p>
+                            <p class="text-xs text-emerald-500">Online</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-1 p-6 overflow-auto relative z-10 flex flex-col gap-4">
+                        <div class="bg-white p-3 rounded-lg rounded-tl-none shadow-sm max-w-md self-start text-sm text-slate-700">
+                            Sir, when is my renewal due?
+                            <p class="text-[10px] text-slate-400 text-right mt-1">10:30 AM</p>
+                        </div>
+                        <div class="bg-[#dcf8c6] p-3 rounded-lg rounded-tr-none shadow-sm max-w-md self-end text-sm text-slate-700">
+                            Hello ${DataStore.customers[0].name.split(' ')[0]}, your Motor policy renewal is due on 15th next month. Shall I send the payment link?
+                            <p class="text-[10px] text-slate-500 text-right mt-1">10:35 AM <i class="fa-solid fa-check-double text-blue-500"></i></p>
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 bg-white border-t border-slate-200 relative z-10 flex gap-2">
+                        <input type="text" placeholder="Type a message..." class="flex-1 border border-slate-200 rounded-full px-4 py-2 outline-none focus:border-primary text-sm">
+                        <button class="w-10 h-10 rounded-full bg-emerald-500 text-white hover:bg-emerald-600 flex items-center justify-center"><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    renderReportsModule() {
+        return `
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Analytics & Reports</h2>
+                    <p class="text-slate-500 text-sm">Generate and export business intelligence reports.</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-6 mb-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+                    <h3 class="font-bold text-slate-800 text-lg mb-4">Revenue Trend (YTD)</h3>
+                    <div class="flex-1 relative w-full h-48">
+                        <canvas id="reportRevenueChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+                    <h3 class="font-bold text-slate-800 text-lg mb-4">Claims Settlement Ratio</h3>
+                    <div class="flex-1 relative w-full h-48 flex justify-center items-center">
+                        <canvas id="reportClaimsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition">
+                    <div class="w-12 h-12 bg-blue-50 text-primary rounded-xl flex items-center justify-center text-xl mb-4"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+                    <h3 class="font-bold text-slate-800 text-md mb-2">Financial Report</h3>
+                    <button class="text-primary font-medium text-sm hover:underline"><i class="fa-solid fa-download mr-1"></i> Download PDF</button>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition">
+                    <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl mb-4"><i class="fa-solid fa-file-shield"></i></div>
+                    <h3 class="font-bold text-slate-800 text-md mb-2">Policy Renewal Report</h3>
+                    <button class="text-emerald-600 font-medium text-sm hover:underline"><i class="fa-solid fa-file-excel mr-1"></i> Export Excel</button>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition">
+                    <div class="w-12 h-12 bg-red-50 text-red-600 rounded-xl flex items-center justify-center text-xl mb-4"><i class="fa-solid fa-truck-medical"></i></div>
+                    <h3 class="font-bold text-slate-800 text-md mb-2">Claims Status Report</h3>
+                    <button class="text-red-600 font-medium text-sm hover:underline"><i class="fa-solid fa-download mr-1"></i> Download PDF</button>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition">
+                    <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center text-xl mb-4"><i class="fa-solid fa-user-tie"></i></div>
+                    <h3 class="font-bold text-slate-800 text-md mb-2">Employee Performance</h3>
+                    <button class="text-purple-600 font-medium text-sm hover:underline"><i class="fa-solid fa-file-excel mr-1"></i> Export Excel</button>
+                </div>
+            </div>
+        `;
+    },
+
+    renderStorageModule() {
+        return `
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Secure Document Vault</h2>
+                    <p class="text-slate-500 text-sm">Cloud storage for KYC, policies, and claims documents.</p>
+                </div>
+                <button class="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-800 transition-colors shadow-md flex items-center gap-2">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Upload Document
+                </button>
+            </div>
+            
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex-1 flex flex-col">
+                <div class="p-4 border-b border-slate-100 bg-slate-50 flex gap-4">
+                    <div class="relative flex-1 max-w-md">
+                        <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" placeholder="Search documents..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                    </div>
+                </div>
+                <div class="flex-1 overflow-auto custom-scrollbar p-6 grid grid-cols-4 gap-6">
+                    ${[1,2,3,4,5,6,7,8].map(i => `
+                        <div class="border border-slate-200 rounded-xl p-4 flex flex-col items-center text-center hover:shadow-md hover:border-primary cursor-pointer transition group">
+                            <i class="fa-solid fa-file-pdf text-red-500 text-5xl mb-3 group-hover:scale-110 transition-transform"></i>
+                            <p class="text-sm font-bold text-slate-800 truncate w-full">KYC_Document_00${i}.pdf</p>
+                            <p class="text-xs text-slate-400 mt-1">1.${i} MB • 2 days ago</p>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    },
+
+    // --- INTERACTIVE ACTIONS & MODALS --- //
+    
+    initDashboardCharts() {
+        const revCtx = document.getElementById('revenueChart');
+        const portCtx = document.getElementById('portfolioChart');
+        if(!revCtx || !portCtx) return;
+
+        this.charts.push(new Chart(revCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                datasets: [{
+                    label: 'Revenue (₹)',
+                    data: [120000, 190000, 150000, 220000, 280000, 310000],
+                    borderColor: '#1D4ED8',
+                    backgroundColor: 'rgba(29, 78, 216, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        }));
+
+        this.charts.push(new Chart(portCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Motor', 'Health', 'Life', 'Home'],
+                datasets: [{
+                    data: [45, 25, 20, 10],
+                    backgroundColor: ['#1D4ED8', '#0F766E', '#10B981', '#F59E0B'],
+                    borderWidth: 0
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '70%' }
+        }));
+    },
+
+    initReportCharts() {
+        const revCtx = document.getElementById('reportRevenueChart');
+        const claimsCtx = document.getElementById('reportClaimsChart');
+        if(!revCtx || !claimsCtx) return;
+
+        this.charts.push(new Chart(revCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                datasets: [{
+                    label: 'Income (₹)',
+                    data: [150000, 210000, 180000, 240000, 300000, 330000],
+                    backgroundColor: '#10B981',
+                    borderRadius: 4
+                }, {
+                    label: 'Expenses (₹)',
+                    data: [80000, 95000, 85000, 110000, 105000, 120000],
+                    backgroundColor: '#EF4444',
+                    borderRadius: 4
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        }));
+
+        this.charts.push(new Chart(claimsCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Settled', 'Rejected', 'Under Review'],
+                datasets: [{
+                    data: [65, 10, 25],
+                    backgroundColor: ['#10B981', '#EF4444', '#F59E0B'],
+                    borderWidth: 0
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        }));
+    },
+
+    showAddEntryModal() {
+        const content = `
+            <form class="space-y-4" onsubmit="event.preventDefault(); UI.closeModal('add-entry'); UI.showToast('Ledger entry recorded successfully!'); App.switchModule(App.currentModule);">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Entry Type</label>
+                        <select required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                            <option value="Credit">Credit (Income)</option>
+                            <option value="Debit">Debit (Expense)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Amount (₹)</label>
+                        <input type="number" required min="1" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                        <select required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                            <option value="Premium Collection">Premium Collection</option>
+                            <option value="Commission">Commission</option>
+                            <option value="Salary">Salary</option>
+                            <option value="Office Expense">Office Expense</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Payment Mode</label>
+                        <select required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="UPI">UPI</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Cheque">Cheque</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Remarks / Reference Number</label>
+                        <input type="text" placeholder="e.g. UPI Ref: 123456789" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg font-medium hover:bg-blue-800 transition mt-4">Save Entry</button>
+            </form>
+        `;
+        UI.createModal('add-entry', 'New Ledger Entry', content);
+        UI.openModal('add-entry');
+    },
+
+    showAddEmployeeModal() {
+        const content = `
+            <form class="space-y-4" onsubmit="event.preventDefault(); UI.closeModal('add-employee'); UI.showToast('Employee added successfully!'); App.switchModule('hr');">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+                        <input type="text" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Mobile</label>
+                        <input type="tel" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                        <input type="email" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Role</label>
+                        <select required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                            <option value="Admin">Admin</option>
+                            <option value="CRM Executive">CRM Executive</option>
+                            <option value="Agent">Agent</option>
+                            <option value="Claims Manager">Claims Manager</option>
+                            <option value="Accountant">Accountant</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Base Salary (₹)</label>
+                        <input type="number" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg font-medium hover:bg-blue-800 transition mt-4">Add Employee</button>
+            </form>
+        `;
+        UI.createModal('add-employee', 'Add New Employee', content);
+        UI.openModal('add-employee');
+    },
+
+    showAddCustomerModal() {
+        const agents = DataStore.employees.filter(e => e.role === 'Agent' || e.role === 'CRM Executive');
+        const agentOptions = agents.map(a => `<option value="${a.name}">${a.name} (${a.role})</option>`).join('');
+        
+        const content = `
+            <form class="space-y-4" onsubmit="event.preventDefault(); UI.closeModal('add-customer'); UI.showToast('Customer created successfully!'); App.switchModule('crm');">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+                        <input type="text" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Mobile</label>
+                        <input type="tel" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                        <input type="email" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">PAN Number</label>
+                        <input type="text" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none uppercase">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Assign Agent / Executive</label>
+                        <select required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                            <option value="">-- Select Agent --</option>
+                            ${agentOptions}
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg font-medium hover:bg-blue-800 transition mt-4">Save Customer</button>
+            </form>
+        `;
+        UI.createModal('add-customer', 'Register New Customer', content);
+        UI.openModal('add-customer');
+    },
+
+    openCustomerDetails(index) {
+        const cust = DataStore.customers[index];
+        const content = `
+            <div class="flex items-start gap-6">
+                <div class="w-24 h-24 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-3xl font-bold">
+                    ${cust.name.substring(0,2).toUpperCase()}
+                </div>
+                <div class="flex-1">
+                    <h2 class="text-2xl font-bold text-slate-800">${cust.name}</h2>
+                    <div class="flex gap-4 mt-2 text-sm text-slate-600">
+                        <span class="flex items-center gap-1"><i class="fa-solid fa-phone"></i> ${cust.mobile}</span>
+                        <span class="flex items-center gap-1"><i class="fa-solid fa-envelope"></i> ${cust.email}</span>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                            <p class="text-xs text-slate-500 uppercase font-bold">PAN</p>
+                            <p class="font-mono text-sm">${cust.pan}</p>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                            <p class="text-xs text-slate-500 uppercase font-bold">DOB</p>
+                            <p class="font-medium text-sm">${cust.dob}</p>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                            <p class="text-xs text-slate-500 uppercase font-bold">Agent</p>
+                            <p class="font-medium text-sm">${cust.agentAssigned}</p>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                            <p class="text-xs text-slate-500 uppercase font-bold mb-1">Status</p>
+                            <select onchange="App.updateCustomerStatus(${index}, this.value)" class="w-full text-xs border border-slate-200 rounded px-2 py-1 outline-none focus:border-primary font-medium text-slate-700">
+                                <option value="Active" ${cust.status === 'Active' ? 'selected' : ''}>Active</option>
+                                <option value="Inactive" ${cust.status === 'Inactive' ? 'selected' : ''}>Inactive</option>
+                                <option value="Lead" ${cust.status === 'Lead' ? 'selected' : ''}>Lead</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-between items-end mt-8 mb-4 border-b pb-2">
+                <h4 class="font-bold text-slate-800">Communication History</h4>
+            </div>
+            
+            <form onsubmit="event.preventDefault(); App.addCommunicationHistory(${index});" class="mb-8 flex gap-2">
+                <select id="new-comm-type" class="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none bg-slate-50 font-medium">
+                    <option value="phone">Call</option>
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="envelope">Email</option>
+                    <option value="note-sticky">Note</option>
+                </select>
+                <input type="text" id="new-comm-text" required placeholder="Log a call, message, or note..." class="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                <button type="submit" class="bg-primary text-white px-5 py-2 rounded-lg text-sm hover:bg-blue-800 transition shadow-sm"><i class="fa-solid fa-plus mr-1"></i> Log</button>
+            </form>
+
+            <div id="customer-history-container" class="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent pl-8 md:pl-0">
+                ${cust.history.map(h => `
+                <div class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active fade-in-up">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-slate-50 text-slate-600 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 absolute left-0 md:left-1/2 -translate-x-1/2">
+                        <i class="fa-${h.type === 'whatsapp' ? 'brands fa-whatsapp text-emerald-500' : `solid fa-${h.type} text-primary`}"></i>
+                    </div>
+                    <div class="w-full md:w-[calc(50%-2.5rem)] bg-white p-4 rounded-xl shadow-sm border border-slate-100 md:group-odd:text-right hover:shadow-md transition">
+                        <div class="text-xs text-slate-400 mb-1">${h.time}</div>
+                        <p class="text-sm font-medium text-slate-700">${h.text}</p>
+                    </div>
+                </div>
+                `).join('')}
+            </div>
+        `;
+        
+        const actions = `
+            <button onclick="UI.showToast('Profile details updated successfully!'); UI.closeModal('view-customer'); App.switchModule('crm');" class="border border-slate-200 bg-white text-slate-700 px-4 py-2 rounded-lg text-sm hover:bg-slate-50"><i class="fa-solid fa-pen mr-2"></i>Edit Profile</button>
+            <button onclick="App.actionWhatsApp('${cust.name}')" class="bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-emerald-600"><i class="fa-brands fa-whatsapp mr-2"></i>WhatsApp</button>
+            <button class="bg-primary text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"><i class="fa-solid fa-file-contract mr-2"></i>View Policies</button>
+        `;
+        
+        UI.createModal('view-customer', 'Customer Profile 360°', content, actions);
+        UI.openModal('view-customer');
+    },
+
+    updateCustomerStatus(index, newStatus) {
+        DataStore.customers[index].status = newStatus;
+        UI.showToast(`Customer status updated to ${newStatus}`);
+        
+        // Re-render CRM module in background so table updates instantly
+        if (App.currentModule === 'crm') {
+            const container = document.getElementById('main-container');
+            container.innerHTML = `<div class="module-enter h-full flex flex-col">${App.renderCrmModule()}</div>`;
+        }
+    },
+
+    addCommunicationHistory(index) {
+        const type = document.getElementById('new-comm-type').value;
+        const text = document.getElementById('new-comm-text').value;
+        const now = new Date();
+        const timeStr = `Today, ${now.getHours() > 12 ? now.getHours() - 12 : now.getHours()}:${now.getMinutes().toString().padStart(2, '0')} ${now.getHours() >= 12 ? 'PM' : 'AM'}`;
+        
+        // Add to front of history
+        DataStore.customers[index].history.unshift({
+            type, text, time: timeStr
+        });
+        
+        UI.showToast('Communication logged successfully');
+        // Refresh modal to show new entry
+        this.openCustomerDetails(index);
+    },
+
+    openPolicyDetails(index) {
+        const p = DataStore.policies[index];
+        const content = `
+            <div class="bg-slate-50 rounded-xl p-6 border border-slate-100 relative overflow-hidden">
+                <i class="fa-solid fa-shield absolute -right-4 -bottom-4 text-9xl text-slate-200 opacity-50"></i>
+                <div class="relative z-10">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h2 class="text-3xl font-bold text-slate-800 mb-1">${p.company}</h2>
+                            <p class="text-primary font-mono font-bold">${p.id}</p>
+                        </div>
+                        <span class="badge ${UI.getBadgeClass(p.status)} text-sm px-3 py-1">${p.status}</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-6 mt-8">
+                        <div>
+                            <p class="text-sm text-slate-500 mb-1">Insured Name</p>
+                            <p class="font-bold text-lg">${p.customerName}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-slate-500 mb-1">Policy Type</p>
+                            <p class="font-bold text-lg">${p.type} Insurance</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-slate-500 mb-1">Validity</p>
+                            <p class="font-medium">${p.startDate} to <span class="${new Date(p.expiryDate) < new Date() ? 'text-red-500' : 'text-slate-800'}">${p.expiryDate}</span></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-slate-500 mb-1">Premium Amount</p>
+                            <p class="font-bold text-xl text-emerald-600">₹${p.premium.toLocaleString()}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6 border border-slate-100 rounded-xl overflow-hidden">
+                <div class="bg-slate-50 px-4 py-3 border-b border-slate-100 font-bold text-slate-700 text-sm">Policy Documents</div>
+                <div class="p-4 flex items-center justify-between hover:bg-slate-50 cursor-pointer transition">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-file-pdf text-red-500 text-2xl"></i>
+                        <div>
+                            <p class="text-sm font-medium text-slate-800">Policy_Schedule_${p.id}.pdf</p>
+                            <p class="text-xs text-slate-400">1.2 MB</p>
+                        </div>
+                    </div>
+                    <button class="text-primary hover:text-blue-800"><i class="fa-solid fa-download"></i></button>
+                </div>
+            </div>
+        `;
+        
+        const actions = `
+            <button class="border border-slate-200 bg-white text-slate-700 px-4 py-2 rounded-lg text-sm hover:bg-slate-50"><i class="fa-solid fa-pen mr-2"></i>Edit</button>
+            ${p.status === 'Active' ? `<button class="bg-yellow-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-yellow-600"><i class="fa-solid fa-rotate mr-2"></i>Renew Policy</button>` : ''}
+        `;
+
+        UI.createModal('view-policy', 'Policy Overview', content, actions);
+        UI.openModal('view-policy');
+    },
+
+    openClaimDetails(index) {
+        const c = DataStore.claims[index];
+        const content = `
+            <div class="p-4 bg-red-50 rounded-lg border border-red-100 mb-6 flex justify-between items-center">
+                <div>
+                    <p class="text-xs text-red-600 font-bold uppercase mb-1">Claim Status</p>
+                    <p class="text-lg font-bold text-red-900">${c.status}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs text-red-600 font-bold uppercase mb-1">Claim Amount</p>
+                    <p class="text-2xl font-black text-red-600">₹${c.amount.toLocaleString()}</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-y-4 gap-x-8 mb-8 text-sm">
+                <div>
+                    <span class="text-slate-500 block mb-1">Claim ID</span>
+                    <span class="font-mono font-medium">${c.id}</span>
+                </div>
+                <div>
+                    <span class="text-slate-500 block mb-1">Policy ID</span>
+                    <span class="font-mono font-medium">${c.policyId}</span>
+                </div>
+                <div>
+                    <span class="text-slate-500 block mb-1">Customer Name</span>
+                    <span class="font-medium">${c.customerName}</span>
+                </div>
+                <div>
+                    <span class="text-slate-500 block mb-1">Incident Date</span>
+                    <span class="font-medium">${c.date}</span>
+                </div>
+            </div>
+            
+            <h4 class="font-bold text-slate-800 mb-4 border-b pb-2">Claim Timeline Workflow</h4>
+            <div class="pl-4 border-l-2 border-slate-200 space-y-6">
+                <div class="relative">
+                    <div class="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white"></div>
+                    <p class="text-sm font-bold text-slate-800">Claim Registered</p>
+                    <p class="text-xs text-slate-500">${c.date}</p>
+                </div>
+                <div class="relative">
+                    <div class="absolute -left-[21px] top-1 w-3 h-3 rounded-full ${c.status !== 'Under Review' ? 'bg-emerald-500' : 'bg-primary animate-pulse'} border-2 border-white"></div>
+                    <p class="text-sm font-bold text-slate-800">Surveyor Assigned</p>
+                    <p class="text-xs text-slate-500">Document inspection pending.</p>
+                </div>
+                <div class="relative">
+                    <div class="absolute -left-[21px] top-1 w-3 h-3 rounded-full ${c.status === 'Approved' || c.status === 'Settlement Completed' ? 'bg-emerald-500' : 'bg-slate-300'} border-2 border-white"></div>
+                    <p class="text-sm font-bold text-slate-800">Insurance Approval</p>
+                    <p class="text-xs text-slate-500">Awaiting final sign-off from underwriter.</p>
+                </div>
+            </div>
+        `;
+        
+        const actions = `
+            <button class="bg-primary text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-800">Update Status</button>
+        `;
+        
+        UI.createModal('view-claim', 'Claim Details Tracker', content, actions);
+        UI.openModal('view-claim');
+    },
+
+    openEmployeeDetails(index) {
+        const e = DataStore.employees[index];
+        const content = `
+            <div class="text-center mb-6">
+                <div class="w-20 h-20 bg-primary text-white rounded-full mx-auto flex items-center justify-center text-3xl font-bold shadow-lg mb-3">
+                    ${e.name.substring(0,1)}
+                </div>
+                <h2 class="text-2xl font-bold text-slate-800">${e.name}</h2>
+                <p class="text-primary font-medium">${e.role}</p>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center">
+                    <p class="text-xs text-slate-500 font-bold uppercase mb-1">Monthly Target</p>
+                    <div class="w-16 h-16 rounded-full border-4 border-emerald-500 flex items-center justify-center mx-auto mt-2">
+                        <span class="font-bold text-slate-800">${e.performance}%</span>
+                    </div>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 text-center flex flex-col justify-center">
+                    <p class="text-xs text-slate-500 font-bold uppercase mb-1">Base Salary</p>
+                    <p class="text-xl font-bold text-slate-800">₹${e.salary.toLocaleString()}</p>
+                    <p class="text-xs text-emerald-600 mt-1">+ Commission</p>
+                </div>
+            </div>
+        `;
+        
+        UI.createModal('view-employee', 'Employee Dashboard', content);
+        UI.openModal('view-employee');
+    },
+
+    actionWhatsApp(name) {
+        UI.showToast(`Opening WhatsApp Web for ${name}...`, 'success');
+    }
+};
+
+// Global Exposure for HTML onclicks
+window.autofillLogin = (email, pwd) => {
+    document.getElementById('email').value = email;
+    document.getElementById('password').value = pwd;
+    // visual feedback
+    const btn = document.getElementById('login-btn');
+    btn.classList.add('scale-105');
+    setTimeout(() => btn.classList.remove('scale-105'), 200);
+};
+
+// Boot App
+document.addEventListener('DOMContentLoaded', () => {
+    App.init();
+});
