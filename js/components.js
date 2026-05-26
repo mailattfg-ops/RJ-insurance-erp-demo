@@ -112,7 +112,7 @@ const UI = {
         return 'badge-secondary';
     },
 
-    renderTable(headers, rows, onRowClick = null) {
+    renderTable(headers, rows, onRowClick = null, rowIds = null) {
         let html = `
             <div class="overflow-x-auto">
                 <table class="data-table">
@@ -125,9 +125,9 @@ const UI = {
         `;
         
         rows.forEach((row, i) => {
-            // For interactivity, attach data index or row ID
-            const clickAttr = onRowClick ? `onclick="${onRowClick}(${i})"` : '';
-            html += `<tr ${clickAttr}>`;
+            const rowId = rowIds ? rowIds[i] : i;
+            const clickAttr = onRowClick ? `onclick="${onRowClick}('${rowId}')"` : '';
+            html += `<tr ${clickAttr} class="hover:bg-slate-50 cursor-pointer transition-colors">`;
             
             row.forEach((cell, j) => {
                 // If it looks like a status, wrap in badge

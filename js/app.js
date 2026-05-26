@@ -273,7 +273,8 @@ const App = {
                                 `<span class="bg-slate-100 px-2 py-1 rounded text-xs font-bold">${c.totalPolicies}</span>`,
                                 c.status
                             ]),
-                            'App.openCustomerDetails'
+                            'App.openCustomerDetails',
+                            DataStore.customers.map(c => c.id)
                         ) :
                         UI.renderTable(
                             ['Lead ID', 'Name', 'Mobile', 'Type', 'Stage', 'Owner', 'Demo Scheduled', 'Date'],
@@ -287,7 +288,8 @@ const App = {
                                 l.demoScheduled ? `<span class="px-2 py-0.5 bg-purple-100 text-purple-800 rounded-full text-xs font-bold"><i class="fa-solid fa-calendar-day mr-1"></i>${l.demoScheduled}</span>` : 'None',
                                 l.date
                             ]),
-                            'App.openLeadDetails'
+                            'App.openLeadDetails',
+                            DataStore.leads.map(l => l.id)
                         )
                     }
                 </div>
@@ -313,7 +315,7 @@ const App = {
                     <h2 class="text-2xl font-bold text-slate-800">Policy Management</h2>
                     <p class="text-slate-500 text-sm">Track renewals, issue new policies, and view history.</p>
                 </div>
-                <button class="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-800 transition-colors shadow-md flex items-center gap-2">
+                <button onclick="App.showIssuePolicyModal()" class="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-800 transition-colors shadow-md flex items-center gap-2">
                     <i class="fa-solid fa-file-contract"></i> Issue Policy
                 </button>
             </div>
@@ -339,7 +341,13 @@ const App = {
             </div>
 
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex-1 flex flex-col">
-                <div class="flex-1 overflow-auto custom-scrollbar">
+                <div class="p-4 border-b border-slate-100 bg-slate-50 flex gap-4">
+                    <div class="relative flex-1 max-w-md">
+                        <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="policy-search-input" oninput="App.searchPolicies(this.value)" placeholder="Search by Policy ID, Company, or Customer..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                    </div>
+                </div>
+                <div id="policy-table-container" class="flex-1 overflow-auto custom-scrollbar">
                     ${UI.renderTable(
                         ['Policy No', 'Company', 'Customer', 'Type', 'Premium', 'Expiry', 'Status'],
                         DataStore.policies.map((p, i) => [
@@ -351,7 +359,8 @@ const App = {
                             p.expiryDate,
                             p.status
                         ]),
-                        'App.openPolicyDetails'
+                        'App.openPolicyDetails',
+                        DataStore.policies.map(p => p.id)
                     )}
                 </div>
             </div>
@@ -371,7 +380,13 @@ const App = {
             </div>
             
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex-1 flex flex-col">
-                <div class="flex-1 overflow-auto custom-scrollbar">
+                <div class="p-4 border-b border-slate-100 bg-slate-50 flex gap-4">
+                    <div class="relative flex-1 max-w-md">
+                        <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="claims-search-input" oninput="App.searchClaims(this.value)" placeholder="Search by Claim ID, Customer, or Status..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                    </div>
+                </div>
+                <div id="claims-table-container" class="flex-1 overflow-auto custom-scrollbar">
                     ${UI.renderTable(
                         ['Claim ID', 'Policy ID', 'Customer', 'Type', 'Date', 'Amount', 'Status'],
                         DataStore.claims.map((c, i) => [
@@ -383,7 +398,8 @@ const App = {
                             `₹${c.amount.toLocaleString()}`,
                             c.status
                         ]),
-                        'App.openClaimDetails'
+                        'App.openClaimDetails',
+                        DataStore.claims.map(c => c.id)
                     )}
                 </div>
             </div>
@@ -439,7 +455,13 @@ const App = {
             </div>
             
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex-1 flex flex-col">
-                <div class="flex-1 overflow-auto custom-scrollbar">
+                <div class="p-4 border-b border-slate-100 bg-slate-50 flex gap-4">
+                    <div class="relative flex-1 max-w-md">
+                        <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="hr-search-input" oninput="App.searchHr(this.value)" placeholder="Search by name, role, or ID..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                    </div>
+                </div>
+                <div id="hr-table-container" class="flex-1 overflow-auto custom-scrollbar">
                     ${UI.renderTable(
                         ['EMP ID', 'Name', 'Role', 'Mobile', 'Base Salary', 'Performance', 'Status'],
                         DataStore.employees.map((e, i) => [
@@ -451,7 +473,8 @@ const App = {
                             `<div class="w-full bg-slate-100 rounded-full h-2.5 mt-2"><div class="bg-primary h-2.5 rounded-full" style="width: ${e.performance}%"></div></div>`,
                             e.status
                         ]),
-                        'App.openEmployeeDetails'
+                        'App.openEmployeeDetails',
+                        DataStore.employees.map(e => e.id)
                     )}
                 </div>
             </div>
@@ -477,10 +500,14 @@ const App = {
             </div>
             
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex-1 flex flex-col mt-6">
-                <div class="p-4 border-b border-slate-100 bg-slate-50 font-bold text-slate-800">
-                    Recent Ledger Entries
+                <div class="p-4 border-b border-slate-100 bg-slate-50 flex gap-4 items-center justify-between">
+                    <span class="font-bold text-slate-800">Recent Ledger Entries</span>
+                    <div class="relative w-64">
+                        <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="txn-search-input" oninput="App.searchTxn(this.value)" placeholder="Search ledger category or mode..." class="w-full pl-8 pr-4 py-1.5 border border-slate-200 rounded-lg text-xs focus:border-primary outline-none">
+                    </div>
                 </div>
-                <div class="flex-1 overflow-auto custom-scrollbar">
+                <div id="txn-table-container" class="flex-1 overflow-auto custom-scrollbar">
                     ${UI.renderTable(
                         ['Txn ID', 'Date', 'Category', 'Mode', 'Type', 'Amount', 'Status'],
                         DataStore.transactions.slice(0, 15).map((t, i) => [
@@ -491,7 +518,9 @@ const App = {
                             t.type === 'Credit' ? `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-arrow-down mr-1"></i>IN</span>` : `<span class="text-red-600 font-bold"><i class="fa-solid fa-arrow-up mr-1"></i>OUT</span>`,
                             `<span class="font-mono font-medium">₹${t.amount.toLocaleString()}</span>`,
                             t.status
-                        ])
+                        ]),
+                        null,
+                        DataStore.transactions.slice(0, 15).map(t => t.id)
                     )}
                 </div>
             </div>
@@ -595,22 +624,22 @@ const App = {
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition">
                     <div class="w-12 h-12 bg-blue-50 text-primary rounded-xl flex items-center justify-center text-xl mb-4"><i class="fa-solid fa-file-invoice-dollar"></i></div>
                     <h3 class="font-bold text-slate-800 text-md mb-2">Financial Report</h3>
-                    <button class="text-primary font-medium text-sm hover:underline"><i class="fa-solid fa-download mr-1"></i> Download PDF</button>
+                    <button onclick="UI.showToast('Generating Financial Report PDF...', 'info'); setTimeout(()=>UI.showToast('Financial_Report_YTD.pdf downloaded successfully!', 'success'), 1500);" class="text-primary font-medium text-sm hover:underline"><i class="fa-solid fa-download mr-1"></i> Download PDF</button>
                 </div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition">
                     <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl mb-4"><i class="fa-solid fa-file-shield"></i></div>
                     <h3 class="font-bold text-slate-800 text-md mb-2">Policy Renewal Report</h3>
-                    <button class="text-emerald-600 font-medium text-sm hover:underline"><i class="fa-solid fa-file-excel mr-1"></i> Export Excel</button>
+                    <button onclick="UI.showToast('Exporting Policy Renewal Report to Excel...', 'info'); setTimeout(()=>UI.showToast('Policy_Renewal_Report_2026.xlsx exported successfully!', 'success'), 1500);" class="text-emerald-600 font-medium text-sm hover:underline"><i class="fa-solid fa-file-excel mr-1"></i> Export Excel</button>
                 </div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition">
                     <div class="w-12 h-12 bg-red-50 text-red-600 rounded-xl flex items-center justify-center text-xl mb-4"><i class="fa-solid fa-truck-medical"></i></div>
                     <h3 class="font-bold text-slate-800 text-md mb-2">Claims Status Report</h3>
-                    <button class="text-red-600 font-medium text-sm hover:underline"><i class="fa-solid fa-download mr-1"></i> Download PDF</button>
+                    <button onclick="UI.showToast('Generating Claims Status Report...', 'info'); setTimeout(()=>UI.showToast('Claims_Status_YTD.pdf downloaded successfully!', 'success'), 1500);" class="text-red-600 font-medium text-sm hover:underline"><i class="fa-solid fa-download mr-1"></i> Download PDF</button>
                 </div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition">
                     <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center text-xl mb-4"><i class="fa-solid fa-user-tie"></i></div>
                     <h3 class="font-bold text-slate-800 text-md mb-2">Employee Performance</h3>
-                    <button class="text-purple-600 font-medium text-sm hover:underline"><i class="fa-solid fa-file-excel mr-1"></i> Export Excel</button>
+                    <button onclick="UI.showToast('Exporting Employee Performance metrics...', 'info'); setTimeout(()=>UI.showToast('Employee_Performance_Metrics.xlsx exported successfully!', 'success'), 1500);" class="text-purple-600 font-medium text-sm hover:underline"><i class="fa-solid fa-file-excel mr-1"></i> Export Excel</button>
                 </div>
             </div>
         `;
@@ -862,8 +891,11 @@ const App = {
         UI.openModal('add-customer');
     },
 
-    openCustomerDetails(index) {
-        const cust = DataStore.customers[index];
+    openCustomerDetails(idOrIndex) {
+        const cust = (typeof idOrIndex === 'string' || isNaN(idOrIndex))
+            ? DataStore.customers.find(c => c.id == idOrIndex)
+            : DataStore.customers[idOrIndex];
+        const index = DataStore.customers.indexOf(cust);
         const content = `
             <div class="flex items-start gap-6">
                 <div class="w-24 h-24 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-3xl font-bold">
@@ -933,7 +965,7 @@ const App = {
         const actions = `
             <button onclick="UI.showToast('Profile details updated successfully!'); UI.closeModal('view-customer'); App.switchModule('crm');" class="border border-slate-200 bg-white text-slate-700 px-4 py-2 rounded-lg text-sm hover:bg-slate-50"><i class="fa-solid fa-pen mr-2"></i>Edit Profile</button>
             <button onclick="App.actionWhatsApp('${cust.name}')" class="bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-emerald-600"><i class="fa-brands fa-whatsapp mr-2"></i>WhatsApp</button>
-            <button class="bg-primary text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"><i class="fa-solid fa-file-contract mr-2"></i>View Policies</button>
+            <button onclick="UI.closeModal('view-customer'); App.switchModule('policy');" class="bg-primary text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"><i class="fa-solid fa-file-contract mr-2"></i>View Policies</button>
         `;
         
         UI.createModal('view-customer', 'Customer Profile 360°', content, actions);
@@ -944,11 +976,10 @@ const App = {
         DataStore.customers[index].status = newStatus;
         UI.showToast(`Customer status updated to ${newStatus}`);
         
-        // Re-render CRM module in background so table updates instantly
         if (App.currentModule === 'crm') {
-            const container = document.getElementById('main-container');
-            container.innerHTML = `<div class="module-enter h-full flex flex-col">${App.renderCrmModule()}</div>`;
+            App.switchCrmTab('customers');
         }
+        App.openCustomerDetails(index);
     },
 
     addCommunicationHistory(index) {
@@ -967,8 +998,11 @@ const App = {
         this.openCustomerDetails(index);
     },
 
-    openPolicyDetails(index) {
-        const p = DataStore.policies[index];
+    openPolicyDetails(idOrIndex) {
+        const p = (typeof idOrIndex === 'string' || isNaN(idOrIndex))
+            ? DataStore.policies.find(pol => pol.id == idOrIndex)
+            : DataStore.policies[idOrIndex];
+        const index = DataStore.policies.indexOf(p);
         const content = `
             <div class="bg-slate-50 rounded-xl p-6 border border-slate-100 relative overflow-hidden">
                 <i class="fa-solid fa-shield absolute -right-4 -bottom-4 text-9xl text-slate-200 opacity-50"></i>
@@ -1018,16 +1052,19 @@ const App = {
         `;
         
         const actions = `
-            <button class="border border-slate-200 bg-white text-slate-700 px-4 py-2 rounded-lg text-sm hover:bg-slate-50"><i class="fa-solid fa-pen mr-2"></i>Edit</button>
-            ${p.status === 'Active' ? `<button class="bg-yellow-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-yellow-600"><i class="fa-solid fa-rotate mr-2"></i>Renew Policy</button>` : ''}
+            <button onclick="UI.showToast('Policy details updated successfully!'); UI.closeModal('view-policy');" class="border border-slate-200 bg-white text-slate-700 px-4 py-2 rounded-lg text-sm hover:bg-slate-50"><i class="fa-solid fa-pen mr-2"></i>Edit</button>
+            ${p.status === 'Active' ? `<button onclick="App.renewPolicy(${index})" class="bg-yellow-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-yellow-600"><i class="fa-solid fa-rotate mr-2"></i>Renew Policy</button>` : ''}
         `;
 
         UI.createModal('view-policy', 'Policy Overview', content, actions);
         UI.openModal('view-policy');
     },
 
-    openClaimDetails(index) {
-        const c = DataStore.claims[index];
+    openClaimDetails(idOrIndex) {
+        const c = (typeof idOrIndex === 'string' || isNaN(idOrIndex))
+            ? DataStore.claims.find(cl => cl.id == idOrIndex)
+            : DataStore.claims[idOrIndex];
+        const index = DataStore.claims.indexOf(c);
         const content = `
             <div class="p-4 bg-red-50 rounded-lg border border-red-100 mb-6 flex justify-between items-center">
                 <div>
@@ -1060,21 +1097,41 @@ const App = {
             </div>
             
             <h4 class="font-bold text-slate-800 mb-4 border-b pb-2">Claim Timeline Workflow</h4>
-            <div class="pl-4 border-l-2 border-slate-200 space-y-6">
+            <div class="relative pl-6 border-l-2 border-slate-200 space-y-8 mt-4">
+                <!-- Step 1 -->
                 <div class="relative">
-                    <div class="absolute -left-[21px] top-1 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white"></div>
-                    <p class="text-sm font-bold text-slate-800">Claim Registered</p>
-                    <p class="text-xs text-slate-500">${c.date}</p>
+                    <div class="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-emerald-500 border-4 border-white shadow-sm"></div>
+                    <div>
+                        <p class="text-sm font-bold text-slate-800">Claim Registered</p>
+                        <p class="text-xs text-slate-500">Incident reported on ${c.date}</p>
+                    </div>
                 </div>
+                
+                <!-- Step 2 -->
                 <div class="relative">
-                    <div class="absolute -left-[21px] top-1 w-3 h-3 rounded-full ${c.status !== 'Under Review' ? 'bg-emerald-500' : 'bg-primary animate-pulse'} border-2 border-white"></div>
-                    <p class="text-sm font-bold text-slate-800">Surveyor Assigned</p>
-                    <p class="text-xs text-slate-500">Document inspection pending.</p>
+                    <div class="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full ${c.status === 'Under Review' ? 'bg-primary animate-pulse border-4 border-white shadow-sm' : (['Document Verification', 'Approved', 'Settlement Completed'].includes(c.status) ? 'bg-emerald-500 border-4 border-white shadow-sm' : 'bg-slate-300 border-4 border-white shadow-sm')}"></div>
+                    <div>
+                        <p class="text-sm font-bold text-slate-800">Surveyor Assessment & Document Verification</p>
+                        <p class="text-xs text-slate-500">${c.status === 'Under Review' ? 'Awaiting surveyor report' : 'Documents verified & approved'}</p>
+                    </div>
                 </div>
+                
+                <!-- Step 3 -->
                 <div class="relative">
-                    <div class="absolute -left-[21px] top-1 w-3 h-3 rounded-full ${c.status === 'Approved' || c.status === 'Settlement Completed' ? 'bg-emerald-500' : 'bg-slate-300'} border-2 border-white"></div>
-                    <p class="text-sm font-bold text-slate-800">Insurance Approval</p>
-                    <p class="text-xs text-slate-500">Awaiting final sign-off from underwriter.</p>
+                    <div class="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full ${c.status === 'Document Verification' ? 'bg-primary animate-pulse border-4 border-white shadow-sm' : (['Approved', 'Settlement Completed'].includes(c.status) ? 'bg-emerald-500 border-4 border-white shadow-sm' : (c.status === 'Rejected' ? 'bg-red-500 border-4 border-white shadow-sm' : 'bg-slate-300 border-4 border-white shadow-sm'))}"></div>
+                    <div>
+                        <p class="text-sm font-bold text-slate-800">Underwriting Approval</p>
+                        <p class="text-xs text-slate-500">${c.status === 'Rejected' ? 'Claim rejected by underwriting' : (['Approved', 'Settlement Completed'].includes(c.status) ? 'Claim approved' : 'Approval pending')}</p>
+                    </div>
+                </div>
+
+                <!-- Step 4 -->
+                <div class="relative">
+                    <div class="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full ${c.status === 'Approved' ? 'bg-primary animate-pulse border-4 border-white shadow-sm' : (c.status === 'Settlement Completed' ? 'bg-emerald-500 border-4 border-white shadow-sm' : 'bg-slate-300 border-4 border-white shadow-sm')}"></div>
+                    <div>
+                        <p class="text-sm font-bold text-slate-800">Fund Settlement</p>
+                        <p class="text-xs text-slate-500">${c.status === 'Settlement Completed' ? 'Funds disbursed to bank account' : 'Settlement pending'}</p>
+                    </div>
                 </div>
             </div>
         `;
@@ -1087,8 +1144,11 @@ const App = {
         UI.openModal('view-claim');
     },
 
-    openEmployeeDetails(index) {
-        const e = DataStore.employees[index];
+    openEmployeeDetails(idOrIndex) {
+        const e = (typeof idOrIndex === 'string' || isNaN(idOrIndex))
+            ? DataStore.employees.find(emp => emp.id == idOrIndex || emp.name == idOrIndex)
+            : DataStore.employees[idOrIndex];
+        const index = DataStore.employees.indexOf(e);
         const content = `
             <div class="text-center mb-6">
                 <div class="w-20 h-20 bg-primary text-white rounded-full mx-auto flex items-center justify-center text-3xl font-bold shadow-lg mb-3">
@@ -1126,8 +1186,11 @@ const App = {
         UI.showToast(`Opening WhatsApp Web for ${name}...`, 'success');
     },
 
-    openLeadDetails(index) {
-        const lead = DataStore.leads[index];
+    openLeadDetails(idOrIndex) {
+        const lead = (typeof idOrIndex === 'string' || isNaN(idOrIndex))
+            ? DataStore.leads.find(l => l.id == idOrIndex)
+            : DataStore.leads[idOrIndex];
+        const index = DataStore.leads.indexOf(lead);
         const content = `
             <div class="space-y-4">
                 <div class="flex items-center gap-4">
@@ -1198,6 +1261,7 @@ const App = {
         if (App.currentModule === 'crm') {
             App.switchCrmTab('leads');
         }
+        App.openLeadDetails(index);
     },
 
     showAddLeadModal() {
@@ -1298,12 +1362,13 @@ const App = {
     updateClaimStatus(index, newStatus) {
         DataStore.claims[index].status = newStatus;
         UI.closeModal('update-claim');
-        UI.closeModal('view-claim');
         UI.showToast(`Claim status changed to ${newStatus}`);
+        
         if (App.currentModule === 'claims') {
             const container = document.getElementById('main-container');
             container.innerHTML = `<div class="module-enter h-full flex flex-col">${App.renderClaimsModule()}</div>`;
         }
+        App.openClaimDetails(index);
     },
 
     showFundTransferModal() {
@@ -1365,6 +1430,250 @@ const App = {
         `;
         UI.createModal('upload-doc', 'Secure Document Upload', content);
         UI.openModal('upload-doc');
+    },
+
+    searchCrm(query) {
+        const q = query.toLowerCase();
+        const container = document.getElementById('crm-table-container');
+        if(!container) return;
+        
+        if (this.crmTab === 'customers') {
+            const filtered = DataStore.customers.filter(c => 
+                c.name.toLowerCase().includes(q) || 
+                c.mobile.includes(q) || 
+                c.email.toLowerCase().includes(q)
+            );
+            container.innerHTML = UI.renderTable(
+                ['ID', 'Name', 'Mobile', 'Email', 'Agent Assigned', 'Policies', 'Status'],
+                filtered.map((c, i) => [
+                    `<span class="font-mono text-xs text-slate-500">${c.id}</span>`,
+                    `<div class="font-medium text-slate-800">${c.name}</div>`,
+                    c.mobile,
+                    `<span class="text-slate-500 text-xs">${c.email}</span>`,
+                    c.agentAssigned,
+                    `<span class="bg-slate-100 px-2 py-1 rounded text-xs font-bold">${c.totalPolicies}</span>`,
+                    c.status
+                ]),
+                'App.openCustomerDetails',
+                filtered.map(c => c.id)
+            );
+        } else {
+            const filtered = DataStore.leads.filter(l => 
+                l.name.toLowerCase().includes(q) || 
+                l.mobile.includes(q) || 
+                l.insuranceType.toLowerCase().includes(q) ||
+                l.stage.toLowerCase().includes(q)
+            );
+            container.innerHTML = UI.renderTable(
+                ['Lead ID', 'Name', 'Mobile', 'Type', 'Stage', 'Owner', 'Demo Scheduled', 'Date'],
+                filtered.map((l, i) => [
+                    `<span class="font-mono text-xs text-slate-500">${l.id}</span>`,
+                    `<div class="font-medium text-slate-800">${l.name}</div>`,
+                    l.mobile,
+                    l.insuranceType,
+                    `<span class="px-2 py-0.5 rounded text-xs font-bold ${l.stage === 'Interested' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-800'}">${l.stage}</span>`,
+                    l.assignedTo,
+                    l.demoScheduled ? `<span class="px-2 py-0.5 bg-purple-100 text-purple-800 rounded-full text-xs font-bold"><i class="fa-solid fa-calendar-day mr-1"></i>${l.demoScheduled}</span>` : 'None',
+                    l.date
+                ]),
+                'App.openLeadDetails',
+                filtered.map(l => l.id)
+            );
+        }
+    },
+
+    searchPolicies(query) {
+        const q = query.toLowerCase();
+        const container = document.getElementById('policy-table-container');
+        if(!container) return;
+        
+        const filtered = DataStore.policies.filter(p => 
+            p.id.toLowerCase().includes(q) || 
+            p.company.toLowerCase().includes(q) || 
+            p.customerName.toLowerCase().includes(q) ||
+            p.type.toLowerCase().includes(q)
+        );
+        container.innerHTML = UI.renderTable(
+            ['Policy No', 'Company', 'Customer', 'Type', 'Premium', 'Expiry', 'Status'],
+            filtered.map((p, i) => [
+                `<span class="font-mono text-xs text-primary font-bold cursor-pointer hover:underline">${p.id}</span>`,
+                `<div class="flex items-center gap-2"><div class="w-6 h-6 rounded bg-slate-100 flex items-center justify-center text-xs"><i class="fa-solid fa-building"></i></div> <span class="text-sm font-medium">${p.company}</span></div>`,
+                p.customerName,
+                p.type,
+                `₹${p.premium.toLocaleString()}`,
+                p.expiryDate,
+                p.status
+            ]),
+            'App.openPolicyDetails',
+            filtered.map(p => p.id)
+        );
+    },
+
+    searchClaims(query) {
+        const q = query.toLowerCase();
+        const container = document.getElementById('claims-table-container');
+        if(!container) return;
+        
+        const filtered = DataStore.claims.filter(c => 
+            c.id.toLowerCase().includes(q) || 
+            c.customerName.toLowerCase().includes(q) || 
+            c.status.toLowerCase().includes(q) ||
+            c.policyId.toLowerCase().includes(q)
+        );
+        container.innerHTML = UI.renderTable(
+            ['Claim ID', 'Policy ID', 'Customer', 'Type', 'Date', 'Amount', 'Status'],
+            filtered.map((c, i) => [
+                `<span class="font-mono text-xs font-bold">${c.id}</span>`,
+                `<span class="font-mono text-xs text-slate-500">${c.policyId}</span>`,
+                c.customerName,
+                c.type,
+                c.date,
+                `₹${c.amount.toLocaleString()}`,
+                c.status
+            ]),
+            'App.openClaimDetails',
+            filtered.map(c => c.id)
+        );
+    },
+
+    searchHr(query) {
+        const q = query.toLowerCase();
+        const container = document.getElementById('hr-table-container');
+        if(!container) return;
+        
+        const filtered = DataStore.employees.filter(e => 
+            e.name.toLowerCase().includes(q) || 
+            e.role.toLowerCase().includes(q) || 
+            e.id.toLowerCase().includes(q)
+        );
+        container.innerHTML = UI.renderTable(
+            ['EMP ID', 'Name', 'Role', 'Mobile', 'Base Salary', 'Performance', 'Status'],
+            filtered.map((e, i) => [
+                `<span class="font-mono text-xs">${e.id}</span>`,
+                `<div class="font-medium">${e.name}</div><div class="text-xs text-slate-400">${e.email}</div>`,
+                e.role,
+                e.mobile,
+                `₹${e.salary.toLocaleString()}`,
+                `<div class="w-full bg-slate-100 rounded-full h-2.5 mt-2"><div class="bg-primary h-2.5 rounded-full" style="width: ${e.performance}%"></div></div>`,
+                e.status
+            ]),
+            'App.openEmployeeDetails',
+            filtered.map(e => e.id)
+        );
+    },
+
+    searchTxn(query) {
+        const q = query.toLowerCase();
+        const container = document.getElementById('txn-table-container');
+        if(!container) return;
+        
+        const filtered = DataStore.transactions.filter(t => 
+            t.category.toLowerCase().includes(q) || 
+            t.mode.toLowerCase().includes(q) || 
+            t.id.toLowerCase().includes(q)
+        );
+        container.innerHTML = UI.renderTable(
+            ['Txn ID', 'Date', 'Category', 'Mode', 'Type', 'Amount', 'Status'],
+            filtered.slice(0, 15).map((t, i) => [
+                `<span class="font-mono text-xs">${t.id}</span>`,
+                t.date,
+                t.category,
+                `<span class="px-2 py-1 bg-slate-100 rounded text-xs">${t.mode}</span>`,
+                t.type === 'Credit' ? `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-arrow-down mr-1"></i>IN</span>` : `<span class="text-red-600 font-bold"><i class="fa-solid fa-arrow-up mr-1"></i>OUT</span>`,
+                `<span class="font-mono font-medium">₹${t.amount.toLocaleString()}</span>`,
+                t.status
+            ]),
+            null,
+            filtered.slice(0, 15).map(t => t.id)
+        );
+    },
+
+    renewPolicy(index) {
+        const p = DataStore.policies[index];
+        p.status = 'Active';
+        
+        const expDate = new Date(p.expiryDate);
+        expDate.setFullYear(expDate.getFullYear() + 1);
+        p.expiryDate = expDate.toISOString().split('T')[0];
+        
+        UI.closeModal('view-policy');
+        UI.showToast(`Policy ${p.id} successfully renewed for 1 full year!`, 'success');
+        if (App.currentModule === 'policy') {
+            App.switchModule('policy');
+        }
+    },
+
+    showIssuePolicyModal() {
+        const content = `
+            <form class="space-y-4" onsubmit="event.preventDefault(); App.issuePolicy();">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Customer Name</label>
+                        <input type="text" id="issue-policy-cust" required placeholder="e.g. Roy" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Company / Carrier</label>
+                        <select id="issue-policy-comp" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                            <option value="HDFC Ergo">HDFC Ergo</option>
+                            <option value="ICICI Lombard">ICICI Lombard</option>
+                            <option value="Tata AIG">Tata AIG</option>
+                            <option value="LIC India">LIC India</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Policy Type</label>
+                        <select id="issue-policy-type" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                            <option value="Motor">Motor Insurance</option>
+                            <option value="Health">Health Insurance</option>
+                            <option value="Life">Life Insurance</option>
+                            <option value="Home">Home Insurance</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Premium (₹)</label>
+                        <input type="number" id="issue-policy-prem" required min="1000" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
+                        <input type="date" id="issue-policy-start" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Expiry Date</label>
+                        <input type="date" id="issue-policy-expiry" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg font-medium hover:bg-blue-800 transition mt-4">Issue Policy Copy</button>
+            </form>
+        `;
+        UI.createModal('issue-policy-modal', 'Issue New Insurance Policy', content);
+        UI.openModal('issue-policy-modal');
+    },
+
+    issuePolicy() {
+        const custName = document.getElementById('issue-policy-cust').value;
+        const company = document.getElementById('issue-policy-comp').value;
+        const type = document.getElementById('issue-policy-type').value;
+        const premium = parseFloat(document.getElementById('issue-policy-prem').value);
+        const start = document.getElementById('issue-policy-start').value;
+        const expiry = document.getElementById('issue-policy-expiry').value;
+
+        const newPol = {
+            id: `POL-${Math.floor(100000 + Math.random() * 900000)}`,
+            company,
+            customerName: custName,
+            type,
+            premium,
+            startDate: start,
+            expiryDate: expiry,
+            status: 'Active'
+        };
+
+        DataStore.policies.unshift(newPol);
+        UI.closeModal('issue-policy-modal');
+        UI.showToast('Policy issued successfully! Secure PDF generated in background.', 'success');
+        if (App.currentModule === 'policy') {
+            App.switchModule('policy');
+        }
     },
 
     autofillWhatsAppMsg(msg) {
